@@ -1,0 +1,51 @@
+{
+  "@@locale": "en",
+  "appName": "Fifteen",
+  "className": "TOPAR-115",
+  "tabAnnouncements": "Announcements",
+  "tabChat": "Group Chat",
+  "tabAiTutor": "AI Tutor",
+  "tabSettings": "Settings",
+  "composeLabel": "Announcement",
+  "composePlaceholder": "Type your announcement here…",
+  "selectAll": "Select All",
+  "unselectAll": "Unselect All",
+  "selectedCount": "{count} of {total} selected",
+  "@selectedCount": {
+    "description": "Recipient selection count indicator",
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "sendButton": "Send to {count} students",
+  "@sendButton": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "metricChars": "Characters",
+  "metricSmsPerson": "SMS / person",
+  "metricTotalSms": "Total SMS",
+  "dispatchSending": "Sending SMS…",
+  "dispatchProgress": "{current} / {total} sent",
+  "@dispatchProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "summaryAllSent": "All messages sent! 🎉",
+  "summaryPartial": "Dispatch complete",
+  "summarySentCount": "{count} students notified via GSM SMS.",
+  "@summarySentCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "summaryDone": "Done",
+  "permissionDenied": "SMS permission denied. Please allow it in Settings.",
+  "openSettings": "Settings",
+  "offlineMode": "GSM Offline",
+  "keepAppOpen": "Please keep the app open…"
+}

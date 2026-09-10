@@ -1,0 +1,51 @@
+{
+  "@@locale": "tk",
+  "appName": "On Bäş",
+  "className": "TOPAR-115",
+  "tabAnnouncements": "Duyurular",
+  "tabChat": "Topar Çat",
+  "tabAiTutor": "AI Mugallym",
+  "tabSettings": "Sazlamalar",
+  "composeLabel": "Duyuru / Habar",
+  "composePlaceholder": "Duyuryňyzy ýazyň…",
+  "selectAll": "Hemmesini saýla",
+  "unselectAll": "Hemmesini aýyr",
+  "selectedCount": "{total} sanynyň {count} saýlandy",
+  "@selectedCount": {
+    "description": "Alyjy saýlama sany",
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "sendButton": "{count} talypba iberi",
+  "@sendButton": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "metricChars": "Harplar",
+  "metricSmsPerson": "SMS / adam",
+  "metricTotalSms": "Jemi SMS",
+  "dispatchSending": "SMS iberilýär…",
+  "dispatchProgress": "{current} / {total} iberildi",
+  "@dispatchProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "summaryAllSent": "Ähli habarlar iberildi! 🎉",
+  "summaryPartial": "Iberiş tamamlandy",
+  "summarySentCount": "{count} talyp GSM SMS arkaly habarly edildi.",
+  "@summarySentCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "summaryDone": "Ýapmak",
+  "permissionDenied": "SMS rugsady ret edildi. Sazlamalarda rugsat beriň.",
+  "openSettings": "Sazlamalar",
+  "offlineMode": "GSM Awtonom",
+  "keepAppOpen": "Programmany açyk saklaň…"
+}
