@@ -71,7 +71,7 @@ class RecipientListTile extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _maskPhone(student.phone),
+                          _formatPhone(student.phone),
                           style: tt.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                             letterSpacing: 0.3,
@@ -107,11 +107,14 @@ class RecipientListTile extends StatelessWidget {
     );
   }
 
-  /// Shows first 6 digits + *** mask for privacy in the UI.
-  String _maskPhone(String phone) {
-    if (phone.length <= 6) return phone;
-    final visible = phone.substring(0, phone.length - 4);
-    return '$visible••••';
+  /// Formats phone as "+993 XX XX XX XX" for readability.
+  String _formatPhone(String phone) {
+    // Strip the leading +993 prefix and format with spaces.
+    if (phone.startsWith('+993') && phone.length == 12) {
+      final digits = phone.substring(4); // 8 digits after +993
+      return '+993 ${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 6)} ${digits.substring(6, 8)}';
+    }
+    return phone;
   }
 }
 

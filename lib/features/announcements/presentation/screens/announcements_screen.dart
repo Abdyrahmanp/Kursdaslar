@@ -171,7 +171,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
           opacity: collapsed ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 200),
           child: Text(
-            'Fifteen 🎓',
+            'Kursdaşlar 🎓',
             style: tt.titleMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -199,7 +199,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                   Row(
                     children: [
                       Text(
-                        'Fifteen ',
+                        'Kursdaşlar ',
                         style: tt.headlineMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -265,7 +265,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                       size: 18, color: cs.primary),
                   const Gap(6),
                   Text(
-                    'Duyuru / Announcement',
+                    'Habar ýazmak',
                     style: tt.labelLarge?.copyWith(
                       color: cs.primary,
                       fontWeight: FontWeight.w700,
@@ -284,11 +284,13 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                 style: tt.bodyMedium,
                 decoration: InputDecoration(
                   hintText:
-                      'Type your announcement here…\n(e.g. "Şu gün sapak 10:00-da başlayar.")',
+                      'Habaryňyzy şu ýere ýazyň…',
                   hintStyle: tt.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant.withAlpha(140),
                   ),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                   filled: false,
                 ),

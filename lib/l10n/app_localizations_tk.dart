@@ -9,13 +9,13 @@ class AppLocalizationsTk extends AppLocalizations {
   AppLocalizationsTk([String locale = 'tk']) : super(locale);
 
   @override
-  String get appName => 'On Bäş';
+  String get appName => 'Kursdaşlar';
 
   @override
   String get className => 'TOPAR-115';
 
   @override
-  String get tabAnnouncements => 'Duyurular';
+  String get tabAnnouncements => 'Duyduryşlar';
 
   @override
   String get tabChat => 'Topar Çat';

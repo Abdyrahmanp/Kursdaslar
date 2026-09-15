@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:topar_115/features/announcements/presentation/screens/announcements_screen.dart';
+import 'package:topar_115/features/settings/presentation/screens/settings_screen.dart';
 
 // ── Active Tab Provider ───────────────────────────────────────────────────────
 
@@ -41,12 +42,7 @@ class FifteenScaffold extends ConsumerWidget {
             icon: Icons.psychology_rounded,
             color: Color(0xFF8B5CF6),
           ),
-          _StubScreen(
-            title: 'Sazlamalar',
-            subtitle: 'Profile, language & theme settings — coming in Step 4',
-            icon: Icons.settings_rounded,
-            color: Color(0xFF059669),
-          ),
+          SettingsScreen(),
         ],
       ),
       bottomNavigationBar: _FifteenNavBar(
@@ -77,7 +73,7 @@ class _FifteenNavBar extends StatelessWidget {
         NavigationDestination(
           icon: Icon(Icons.campaign_outlined),
           selectedIcon: Icon(Icons.campaign_rounded),
-          label: 'Duyurular',
+          label: 'Duyduryşlar',
         ),
         NavigationDestination(
           icon: Icon(Icons.chat_bubble_outline_rounded),
