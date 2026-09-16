@@ -62,12 +62,14 @@ class SmsDispatcherState {
   final List<Student> students;
   final Set<String> selectedIds;
   final String message;
+  final String searchQuery;
   final DispatchStatus status;
 
   const SmsDispatcherState({
     required this.students,
     this.selectedIds = const {},
     this.message = '',
+    this.searchQuery = '',
     this.status = const DispatchIdle(),
   });
 
@@ -75,6 +77,7 @@ class SmsDispatcherState {
         students: StudentRepository.classStudents,
         selectedIds: {},
         message: '',
+        searchQuery: '',
         status: DispatchIdle(),
       );
 
@@ -106,18 +109,31 @@ class SmsDispatcherState {
   List<Student> get selectedStudents =>
       students.where((s) => selectedIds.contains(s.id)).toList();
 
+  List<Student> get filteredStudents {
+    if (searchQuery.trim().isEmpty) return students;
+    final q = searchQuery.trim().toLowerCase();
+    return students.where((s) {
+      final nameMatch = s.name.toLowerCase().contains(q);
+      final phoneMatch = s.phone.contains(q) ||
+          StudentRepository.normalizePhone(s.phone).contains(q);
+      return nameMatch || phoneMatch;
+    }).toList();
+  }
+
   // ── Copy ─────────────────────────────────────────────────────────────────
 
   SmsDispatcherState copyWith({
     List<Student>? students,
     Set<String>? selectedIds,
     String? message,
+    String? searchQuery,
     DispatchStatus? status,
   }) {
     return SmsDispatcherState(
       students: students ?? this.students,
       selectedIds: selectedIds ?? this.selectedIds,
       message: message ?? this.message,
+      searchQuery: searchQuery ?? this.searchQuery,
       status: status ?? this.status,
     );
   }
@@ -141,6 +157,10 @@ class SmsDispatcherNotifier extends Notifier<SmsDispatcherState> {
 
   void updateMessage(String value) {
     state = state.copyWith(message: value);
+  }
+
+  void updateSearchQuery(String query) {
+    state = state.copyWith(searchQuery: query);
   }
 
   // ── Selection ────────────────────────────────────────────────────────────

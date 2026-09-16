@@ -18,6 +18,8 @@ class FifteenTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final Widget? trailing;
   final ValueChanged<String>? onChanged;
+  final String? prefixText;
+  final TextInputType? keyboardType;
 
   const FifteenTextField({
     super.key,
@@ -30,6 +32,8 @@ class FifteenTextField extends StatefulWidget {
     this.focusNode,
     this.trailing,
     this.onChanged,
+    this.prefixText,
+    this.keyboardType,
   });
 
   @override
@@ -96,13 +100,22 @@ class _FifteenTextFieldState extends State<FifteenTextField> {
             minLines: widget.minLines,
             maxLines: widget.maxLines,
             onChanged: widget.onChanged,
-            textCapitalization: TextCapitalization.sentences,
+            keyboardType: widget.keyboardType,
+            textCapitalization: widget.keyboardType == TextInputType.phone
+                ? TextCapitalization.none
+                : TextCapitalization.sentences,
             style: tt.bodyMedium?.copyWith(
               color: cs.onSurface,
               height: 1.5,
               fontSize: 15,
             ),
             decoration: InputDecoration(
+              prefixText: widget.prefixText,
+              prefixStyle: tt.bodyMedium?.copyWith(
+                color: cs.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
               hintText: widget.hintText,
               hintStyle: tt.bodyMedium?.copyWith(
                 color: cs.onSurfaceVariant.withAlpha(140),

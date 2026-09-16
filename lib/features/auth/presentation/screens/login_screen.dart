@@ -60,10 +60,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    final fullPhone = phone.startsWith('+993') || phone.startsWith('993') ? phone : '+993 $phone';
+
     await ref.read(authProvider.notifier).loginByFields(
           firstName: firstName,
           lastName: lastName,
-          phone: phone,
+          phone: fullPhone,
         );
   }
 
@@ -197,7 +199,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         controller: _phoneCtrl,
                         focusNode: _phoneFocus,
                         label: 'Telefon belgisi',
-                        hintText: 'Telefon belgiňizi giriziň',
+                        hintText: '61 76 28 19',
+                        prefixText: '+993 ',
+                        keyboardType: TextInputType.phone,
                         icon: Icons.phone_android_rounded,
                         onChanged: (_) => ref.read(authProvider.notifier).clearError(),
                       ),

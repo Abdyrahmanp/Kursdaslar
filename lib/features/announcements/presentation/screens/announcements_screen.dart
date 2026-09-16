@@ -28,6 +28,7 @@ class AnnouncementsScreen extends ConsumerStatefulWidget {
 
 class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   final TextEditingController _msgCtrl = TextEditingController();
+  final TextEditingController _searchCtrl = TextEditingController();
   bool _dialogOpen = false;
 
   @override
@@ -41,6 +42,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   @override
   void dispose() {
     _msgCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -147,6 +149,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
               ),
             ),
           ),
+
+          // ── Search Card ──────────────────────────────────────────────────
+          SliverToBoxAdapter(child: _buildSearchCard(context, state)),
 
           // ── Sticky Selection Header ───────────────────────────────────────
           SliverPersistentHeader(
@@ -349,14 +354,97 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     );
   }
 
+  // ── Search Card ───────────────────────────────────────────────────────────
+
+  Widget _buildSearchCard(BuildContext context, SmsDispatcherState state) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+          boxShadow: [
+            BoxShadow(
+              color: cs.primary.withAlpha(10),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchCtrl,
+          onChanged: (val) {
+            ref.read(smsDispatcherProvider.notifier).updateSearchQuery(val);
+          },
+          style: tt.bodyMedium,
+          decoration: InputDecoration(
+            hintText: 'Toparadaşlary ady ýa-da nomeri boýunça gözlemek…',
+            hintStyle: tt.bodyMedium?.copyWith(
+              color: cs.onSurfaceVariant.withAlpha(140),
+              fontSize: 14,
+            ),
+            prefixIcon: Icon(Icons.search_rounded, color: cs.primary, size: 22),
+            suffixIcon: state.searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: Icon(Icons.clear_rounded, size: 18, color: cs.onSurfaceVariant),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      ref.read(smsDispatcherProvider.notifier).updateSearchQuery('');
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Student List ──────────────────────────────────────────────────────────
 
   Widget _buildStudentList(BuildContext context, SmsDispatcherState state) {
+    final list = state.filteredStudents;
+
+    if (list.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search_off_rounded,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(120),
+              ),
+              const Gap(12),
+              Text(
+                'Gözlege laýyk talyp tapylmady',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const Gap(4),
+              Text(
+                'Nomeri ýa-da ady täzeden barlap görüň.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-      itemCount: state.students.length,
+      itemCount: list.length,
       itemBuilder: (ctx, index) {
-        final student = state.students[index];
+        final student = list[index];
         return RecipientListTile(
           key: ValueKey(student.id),
           student: student,
