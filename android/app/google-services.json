@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "597619592600",
+    "project_id": "kursdaslar-5890f",
+    "storage_bucket": "kursdaslar-5890f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597619592600:android:bf5fd2777d45ecd3c6afed",
+        "android_client_info": {
+          "package_name": "com.tmversiya.kursdaslar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhaJPytoQhFE-bhT7uEVovilBW1KxQIjg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,24 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topar_115/app/theme/app_theme.dart';
-import 'package:topar_115/shared/widgets/fifteen_scaffold.dart';
+import 'package:topar_115/features/auth/presentation/screens/login_screen.dart';
 
 void main() {
-  testWidgets('FifteenScaffold renders 4-tab NavigationBar', (WidgetTester tester) async {
+  testWidgets('LoginScreen renders header, title, inputs, and login button', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
-          home: const FifteenScaffold(),
+          home: const LoginScreen(),
         ),
       ),
     );
 
-    // Verify the NavigationBar destinations are present.
-    expect(find.text('Duyurular'), findsOneWidget);
-    expect(find.text('Chat'), findsOneWidget);
-    expect(find.text('AI Tutor'), findsOneWidget);
-    expect(find.text('Sazlamalar'), findsOneWidget);
+    // Verify main title and separated form elements render correctly.
+    expect(find.text('Kursdaşlar'), findsOneWidget);
+    expect(find.text('Adyňyz'), findsOneWidget);
+    expect(find.text('Familiýaňyz'), findsOneWidget);
+    expect(find.text('Telefon belgisi'), findsOneWidget);
+    expect(find.text('Ulgama gir'), findsOneWidget);
   });
 }

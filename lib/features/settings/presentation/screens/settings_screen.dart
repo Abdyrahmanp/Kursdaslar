@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:topar_115/app/app.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
 import 'package:topar_115/core/utils/haptic_utils.dart';
+import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 
 /// The primary settings screen for "Fifteen" (Step 4 — Sazlamalar).
 ///
@@ -220,6 +221,34 @@ class SettingsScreen extends ConsumerWidget {
                         },
                       ),
                     ],
+                  ),
+                ),
+                const Gap(32),
+
+                // ── Logout Button ───────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      HapticUtils.light();
+                      ref.read(authProvider.notifier).logout();
+                    },
+                    icon: const Icon(Icons.logout_rounded, color: Colors.red),
+                    label: const Text(
+                      'Çykyş etmek',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.red.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                   ),
                 ),
                 const Gap(32),

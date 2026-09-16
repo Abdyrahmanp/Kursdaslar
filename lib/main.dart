@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:topar_115/app/app.dart';
 import 'package:topar_115/app/theme/app_theme.dart';
+import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:topar_115/features/auth/presentation/screens/login_screen.dart';
+import 'package:topar_115/features/student/presentation/screens/normal_student_screen.dart';
 import 'package:topar_115/shared/widgets/fifteen_scaffold.dart';
 
 void main() async {
@@ -22,8 +26,6 @@ void main() async {
     ),
   );
 
-  // Step 2: Firebase.initializeApp() goes here after adding google-services.json.
-
   runApp(
     const ProviderScope(
       child: _FifteenRoot(),
@@ -31,18 +33,36 @@ void main() async {
   );
 }
 
-/// Minimal root widget that wires [AppTheme] and hands off to [FifteenScaffold].
+/// Root widget that wires [AppTheme], reactive theme toggle, and hands off to
+/// the appropriate screen based on authentication & role:
+///   • Not logged in  → [LoginScreen]
+///   • Starşy (Tuşiýewa Abadan) → [FifteenScaffold] (Full announcement dispatch rights)
+///   • Normal Student → [NormalStudentScreen] (View-only announcements & roster)
 class _FifteenRoot extends ConsumerWidget {
   const _FifteenRoot();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final authState = ref.watch(authProvider);
+
+    Widget homeScreen;
+    if (!authState.isAuthenticated) {
+      homeScreen = const LoginScreen();
+    } else if (authState.isStarshy) {
+      homeScreen = const FifteenScaffold();
+    } else {
+      homeScreen = const NormalStudentScreen();
+    }
+
     return MaterialApp(
       title: 'Kursdaşlar',
       debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      home: const FifteenScaffold(),
+      home: homeScreen,
     );
   }
 }
+

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
+import 'package:topar_115/features/announcements/data/repositories/announcement_repository.dart';
 import 'package:topar_115/features/announcements/presentation/controllers/sms_dispatcher_controller.dart';
 import 'package:topar_115/features/announcements/presentation/widgets/dispatch_progress_modal.dart';
 import 'package:topar_115/features/announcements/presentation/widgets/dispatch_summary_sheet.dart';
@@ -71,13 +72,21 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       // Dismiss dialog + show summary when done.
       if (next.status is DispatchDone && prev?.status is! DispatchDone) {
         _dialogOpen = false;
+        final result = next.status as DispatchDone;
+        if (_msgCtrl.text.trim().isNotEmpty) {
+          ref.read(announcementProvider.notifier).addAnnouncement(
+                content: _msgCtrl.text.trim(),
+                recipientCount: result.sentCount,
+              );
+          _msgCtrl.clear();
+        }
         if (context.mounted) {
           Navigator.of(context, rootNavigator: true).maybePop();
           await Future.delayed(const Duration(milliseconds: 200));
           if (context.mounted) {
             await showDispatchSummarySheet(
               context,
-              result: next.status as DispatchDone,
+              result: result,
               onDismiss: () {
                 Navigator.of(context).pop();
                 ref.read(smsDispatcherProvider.notifier).resetToIdle();

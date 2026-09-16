@@ -16,12 +16,12 @@ abstract final class StudentRepository {
     Student(id: 's07', index: 6,  name: 'Islimow Kemal',                phone: '+99364618342'),
     Student(id: 's08', index: 7,  name: 'Sapargulyýew Nazar',           phone: '+99365568490'),
     Student(id: 's09', index: 8,  name: 'Akmämmedow Muhammet',          phone: '+99362964450'),
-    Student(id: 's10', index: 9,  name: 'Muhammedow Batyr',             phone: '+99365832785'),
+    Student(id: 's10', index: 9,  name: 'Muhammedow Batyr',             phone: '+99365852785'),
     Student(id: 's11', index: 10, name: 'Süleýmanow Tahyr',             phone: '+99361957294'),
-    Student(id: 's12', index: 11, name: 'Dowletgulyýew Abdyrahman',     phone: '+99365254766'),
+    Student(id: 's12', index: 11, name: 'Döwletgulyýew Abdyrahman',     phone: '+99365254766'),
     Student(id: 's13', index: 0,  name: 'Myradowa Oguljan',             phone: '+99371582120'),
     Student(id: 's14', index: 1,  name: 'Meredowa Arazjemal',           phone: '+99365670096'),
-    Student(id: 's15', index: 2,  name: 'Tuşiýewa Abadan',              phone: '+99361762819'),
+    Student(id: 's15', index: 2,  name: 'Tuşiýewa Abadan',              phone: '+99361762819', isGroupLeader: true),
     Student(id: 's16', index: 3,  name: 'Omarowa Güljahan',             phone: '+99371150806'),
     Student(id: 's17', index: 4,  name: 'Baýramowa Nurana',             phone: '+99362765960'),
     Student(id: 's18', index: 5,  name: 'Geldimyradow Gurbammuhammet',  phone: '+99362175665'),
@@ -33,4 +33,65 @@ abstract final class StudentRepository {
     Student(id: 's24', index: 11, name: 'Ýaňabergenow Ulugbek',        phone: '+99362244528'),
     Student(id: 's25', index: 0,  name: 'Öwezow Baba',                  phone: '+99361915665'),
   ];
+
+  /// Normalizes phone number strings to pure digits (e.g. "+993 61 76 28 19" -> "61762819").
+  static String normalizePhone(String raw) {
+    String digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('993')) {
+      digits = digits.substring(3);
+    }
+    return digits;
+  }
+
+  /// Normalizes name strings for flexible matching (case-insensitive & token matching).
+  static String normalizeName(String raw) {
+    return raw.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  /// Finds a student by separate first name, last name, and phone number.
+  static Student? findStudentByFields({
+    required String firstName,
+    required String lastName,
+    required String phone,
+  }) {
+    final combined = '$lastName $firstName'.trim();
+    return findStudent(combined, phone);
+  }
+
+  /// Finds a student by name string (full or tokens) and phone number.
+  static Student? findStudent(String nameInput, String phoneInput) {
+    final normPhoneInput = normalizePhone(phoneInput);
+    final normNameInput = normalizeName(nameInput);
+    final inputTokens = normNameInput.split(' ').where((t) => t.isNotEmpty).toList();
+
+    for (final s in classStudents) {
+      final sPhoneNorm = normalizePhone(s.phone);
+      final sNameNorm = normalizeName(s.name);
+      final sTokens = sNameNorm.split(' ');
+
+      // Phone check
+      bool phoneMatch = sPhoneNorm == normPhoneInput;
+      if (!phoneMatch && normPhoneInput.length >= 8 && sPhoneNorm.endsWith(normPhoneInput)) {
+        phoneMatch = true;
+      }
+
+      if (!phoneMatch) continue;
+
+      if (inputTokens.isEmpty) return s;
+
+      // Name check: exact, contained, or token match
+      if (sNameNorm == normNameInput) {
+        return s;
+      }
+
+      bool allTokensMatch = inputTokens.every(
+        (t) => sTokens.any((st) => st.contains(t) || t.contains(st)),
+      );
+      if (allTokensMatch) {
+        return s;
+      }
+    }
+
+    return null;
+  }
 }
