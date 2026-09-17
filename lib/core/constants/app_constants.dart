@@ -23,4 +23,14 @@ abstract final class AppConstants {
   static const Duration animFast = Duration(milliseconds: 150);
   static const Duration animNormal = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
+
+  // ── Alwaysdata Cloud API Configuration ────────────────────────────────────
+  /// Default Alwaysdata endpoint. Can be updated to user's domain.
+  static const String apiBaseUrl = 'https://topar115.alwaysdata.net/api';
+
+  /// Timeout for API network requests.
+  static const Duration apiTimeout = Duration(seconds: 8);
+
+  /// Interval between automatic background sync checks for normal students.
+  static const Duration autoSyncInterval = Duration(seconds: 30);
 }

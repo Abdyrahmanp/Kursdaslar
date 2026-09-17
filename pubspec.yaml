@@ -30,6 +30,9 @@ dependencies:
   # ── Internationalization ────────────────────────────────────────────────────
   intl: ^0.20.2               # ARB date/number formatting
 
+  # ── Networking & Cloud API ──────────────────────────────────────────────────
+  http: ^1.2.2                # Alwaysdata REST API communication
+
   # ── FUTURE: Firebase (Step 2) ── requires google-services.json ──────────────
   # firebase_core: ^3.4.0
   # cloud_firestore: ^5.4.1

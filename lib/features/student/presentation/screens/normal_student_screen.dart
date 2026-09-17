@@ -91,134 +91,232 @@ class _AnnouncementsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final announcements = ref.watch(announcementProvider);
+    final syncStatus = ref.watch(announcementSyncStatusProvider);
     final currentStudent = authState.currentStudent;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        // AppBar
-        SliverAppBar(
-          expandedHeight: 120,
-          pinned: true,
-          backgroundColor: cs.primary,
-          flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
-            title: Text(
-              'Kursdaşlar 🎓',
-              style: tt.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
+    return RefreshIndicator(
+      onRefresh: () async {
+        HapticUtils.light();
+        await ref.read(announcementProvider.notifier).syncWithServer();
+      },
+      color: cs.primary,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
+          // AppBar
+          SliverAppBar(
+            expandedHeight: 120,
+            pinned: true,
+            backgroundColor: cs.primary,
+            actions: [
+              IconButton(
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: syncStatus == SyncStatus.syncing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded, color: Colors.white),
+                ),
+                tooltip: 'Täzele',
+                onPressed: () {
+                  HapticUtils.light();
+                  ref.read(announcementProvider.notifier).syncWithServer();
+                },
               ),
-            ),
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
+              title: Text(
+                'Kursdaşlar 🎓',
+                style: tt.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [cs.primary, cs.tertiary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
 
-        // Welcome Header Banner
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withAlpha(120),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: cs.primary.withAlpha(60)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: currentStudent?.avatarBg ?? cs.primary,
-                    child: Text(
-                      currentStudent?.initials ?? 'T',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+          // Welcome Header Banner
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer.withAlpha(120),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: cs.primary.withAlpha(60)),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: currentStudent?.avatarBg ?? cs.primary,
+                      child: Text(
+                        currentStudent?.initials ?? 'T',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  const Gap(14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Salam, ${currentStudent?.shortName ?? 'Talyp'}! 👋',
-                          style: tt.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: cs.onPrimaryContainer,
+                    const Gap(14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Salam, ${currentStudent?.shortName ?? 'Talyp'}! 👋',
+                            style: tt.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: cs.onPrimaryContainer,
+                            ),
                           ),
-                        ),
-                        const Gap(2),
-                        Text(
-                          'Starşy (Tuşiýewa Abadan) tarapyndan ugradylan duýduryşlar.',
-                          style: tt.bodySmall?.copyWith(
-                            color: cs.onPrimaryContainer.withAlpha(200),
+                          const Gap(2),
+                          Text(
+                            'Starşy (Tuşiýewa Abadan) tarapyndan ugradylan duýduryşlar.',
+                            style: tt.bodySmall?.copyWith(
+                              color: cs.onPrimaryContainer.withAlpha(200),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Server Connection Status Pill
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: _buildSyncStatusBanner(context, syncStatus),
+            ),
+          ),
+
+          // Title Section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.mark_chat_unread_rounded, size: 20, color: cs.primary),
+                  const Gap(8),
+                  Text(
+                    'Gelen Duýduryşlar (${announcements.length})',
+                    style: tt.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
 
-        // Title Section
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-            child: Row(
-              children: [
-                Icon(Icons.mark_chat_unread_rounded, size: 20, color: cs.primary),
-                const Gap(8),
-                Text(
-                  'Gelen Duýduryşlar (${announcements.length})',
-                  style: tt.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+          // Announcement Feed
+          if (announcements.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'Şu wagt täze duýduryş ýok.',
+                  style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                 ),
-              ],
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = announcements[index];
+                    return _AnnouncementCard(announcement: item);
+                  },
+                  childCount: announcements.length,
+                ),
+              ),
             ),
-          ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        // Announcement Feed
-        if (announcements.isEmpty)
-          SliverFillRemaining(
-            child: Center(
-              child: Text(
-                'Şu wagt täze duýduryş ýok.',
-                style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-              ),
-            ),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = announcements[index];
-                  return _AnnouncementCard(announcement: item);
-                },
-                childCount: announcements.length,
+  Widget _buildSyncStatusBanner(BuildContext context, SyncStatus status) {
+    Color bg;
+    Color border;
+    Color textColor;
+    IconData icon;
+    String text;
+
+    switch (status) {
+      case SyncStatus.online:
+        bg = const Color(0xFF10B981).withAlpha(25);
+        border = const Color(0xFF10B981).withAlpha(80);
+        textColor = const Color(0xFF047857);
+        icon = Icons.cloud_done_rounded;
+        text = 'Alwaysdata Serwerine Baglanan • Täze duýduryşlar elýeterli';
+        break;
+      case SyncStatus.syncing:
+        bg = const Color(0xFF3B82F6).withAlpha(25);
+        border = const Color(0xFF3B82F6).withAlpha(80);
+        textColor = const Color(0xFF1D4ED8);
+        icon = Icons.sync_rounded;
+        text = 'Alwaysdata-dan täzelenýär…';
+        break;
+      case SyncStatus.offline:
+      case SyncStatus.idle:
+        bg = const Color(0xFFF59E0B).withAlpha(25);
+        border = const Color(0xFFF59E0B).withAlpha(80);
+        textColor = const Color(0xFFB45309);
+        icon = Icons.cloud_off_rounded;
+        text = 'Offline Režim • Ýerli saklanan duýduryşlar';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: textColor),
+          const Gap(8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textColor,
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -241,7 +339,7 @@ class _AnnouncementCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: announcement.isUrgent
-              ? Colors.orange.withAlpha(120)
+              ? Colors.orange.withAlpha(150)
               : cs.outlineVariant.withAlpha(60),
           width: announcement.isUrgent ? 1.5 : 1.0,
         ),
@@ -308,30 +406,86 @@ class _AnnouncementCard extends StatelessWidget {
           ),
           const Gap(12),
 
-          // Footer Badge
+          // Footer Badges
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 12, color: Colors.green),
-                    Gap(4),
-                    Text(
-                      'Ugradyldy',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
+              // Online / Alwaysdata Badge
+              if (announcement.isOnline)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withAlpha(25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.public_rounded,
+                          size: 12, color: Color(0xFF0284C7)),
+                      Gap(4),
+                      Text(
+                        'Alwaysdata Cloud',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0284C7),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          size: 12, color: Colors.green),
+                      Gap(4),
+                      Text(
+                        'GSM SMS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+
+              // Urgent Badge
+              if (announcement.isUrgent)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.priority_high_rounded,
+                          size: 12, color: Colors.orange),
+                      Gap(3),
+                      Text(
+                        'Gyssagly',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ],
