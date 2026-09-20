@@ -95,7 +95,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                 Expanded(
                   child: Text(
                     success
-                        ? '🌐 Duýduryş Alwaysdata serwerine ugradyldy! Talyplar derrew görer.'
+                        ? '🌐 Duýduryş onlaýn serwere ugradyldy! Talyplar derrew görer.'
                         : '⚠️ Serwere ugradylmady, emma ýerli ýatda saklandy.',
                   ),
                 ),
@@ -511,7 +511,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                               size: 12, color: Color(0xFF059669)),
                           Gap(4),
                           Text(
-                            'Alwaysdata Cloud',
+                            'Onlaýn Bulut',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -703,7 +703,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         can = hasMsg && !_isPostingOnline;
         icon = _isPostingOnline ? Icons.hourglass_top_rounded : Icons.cloud_upload_rounded;
         label = _isPostingOnline
-            ? 'Alwaysdata-a ýüklenýär…'
+            ? 'Serwere ýüklenýär…'
             : (state.selectedIds.isEmpty
                 ? '🌐 Ähli talyplar üçin Internetde paýlaş'
                 : '🌐 ${state.selectedIds.length} talyp üçin serwere goý');
@@ -798,7 +798,7 @@ class _ServerStatusBadge extends ConsumerWidget {
     switch (status) {
       case SyncStatus.online:
         dotColor = const Color(0xFF10B981); // Bright Green
-        label = 'Alwaysdata Online';
+        label = 'Onlaýn Baglanan';
         break;
       case SyncStatus.syncing:
         dotColor = const Color(0xFF3B82F6); // Blue

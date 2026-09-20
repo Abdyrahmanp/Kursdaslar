@@ -24,13 +24,27 @@ abstract final class AppConstants {
   static const Duration animNormal = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
 
-  // ── Alwaysdata Cloud API Configuration ────────────────────────────────────
-  /// Default Alwaysdata endpoint. Can be updated to user's domain.
-  static const String apiBaseUrl = 'https://topar115.alwaysdata.net/api';
+  // ── Cloud API Configuration (Byethost PHP) ────────────────────────────────
+  /// Byethost PHP backend base URL.
+  /// ⚠️  Byethost cPanel'den hesap açtıktan sonra bu URL'yi güncelle!
+  /// Örnek: 'https://topar115.byethost7.com/api'
+  static const String apiBaseUrl = 'https://kursdaslar.byethost4.com/api';
+
+  /// Announcements endpoint
+  static const String announcementsUrl = '$apiBaseUrl/announcements.php';
+
+  /// Chat endpoint (short polling)
+  static const String chatUrl = '$apiBaseUrl/chat.php';
+
+  /// Subjects & Topics endpoint
+  static const String subjectsUrl = '$apiBaseUrl/subjects.php';
 
   /// Timeout for API network requests.
-  static const Duration apiTimeout = Duration(seconds: 8);
+  static const Duration apiTimeout = Duration(seconds: 10);
 
-  /// Interval between automatic background sync checks for normal students.
-  static const Duration autoSyncInterval = Duration(seconds: 30);
+  /// Chat polling interval — her 3 saniyede bir yeni mesaj sorgulanır.
+  static const Duration chatPollInterval = Duration(seconds: 3);
+
+  /// Announcements auto-sync interval.
+  static const Duration autoSyncInterval = Duration(seconds: 20);
 }

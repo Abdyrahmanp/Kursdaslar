@@ -9,6 +9,8 @@ import 'package:topar_115/features/announcements/data/repositories/announcement_
 import 'package:topar_115/features/announcements/data/repositories/student_repository.dart';
 import 'package:topar_115/features/announcements/presentation/widgets/recipient_list_tile.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:topar_115/features/chat/presentation/screens/group_chat_screen.dart';
+import 'package:topar_115/features/subjects/presentation/screens/subjects_screen.dart';
 
 final normalTabProvider = StateProvider<int>((ref) => 0);
 
@@ -16,8 +18,8 @@ final normalTabProvider = StateProvider<int>((ref) => 0);
 ///
 /// Shares the exact 4-tab NavigationBar structure as the Starşy screen ([FifteenScaffold]):
 ///   0 — Duyduryşlar (Read-only view of notices from Starşy)
-///   1 — Chat        (Group Chat)
-///   2 — AI Tutor    (AI Tutor & Quizzes)
+///   1 — Chat        (Real-time Group Chat)
+///   2 — Sapaklar    (Subjects & Lesson Topics)
 ///   3 — Sazlamalar  (Settings, Profile, Roster & Logout)
 class NormalStudentScreen extends ConsumerWidget {
   const NormalStudentScreen({super.key});
@@ -33,18 +35,8 @@ class NormalStudentScreen extends ConsumerWidget {
         index: activeTab,
         children: const [
           _AnnouncementsView(),
-          _StubScreen(
-            title: 'Group Chat',
-            subtitle: 'Realtime discussion — coming in Step 2',
-            icon: Icons.chat_bubble_rounded,
-            color: Color(0xFF4A90E2),
-          ),
-          _StubScreen(
-            title: 'AI Tutor & Quizzes',
-            subtitle: 'Gemini-powered study assistant — coming in Step 3',
-            icon: Icons.psychology_rounded,
-            color: Color(0xFF8B5CF6),
-          ),
+          GroupChatScreen(),
+          SubjectsScreen(),
           _ProfileSettingsView(),
         ],
       ),
@@ -67,9 +59,9 @@ class NormalStudentScreen extends ConsumerWidget {
             label: 'Chat',
           ),
           NavigationDestination(
-            icon: Icon(Icons.psychology_outlined),
-            selectedIcon: Icon(Icons.psychology_rounded),
-            label: 'AI Tutor',
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book_rounded),
+            label: 'Sapaklar',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
@@ -275,14 +267,14 @@ class _AnnouncementsView extends ConsumerWidget {
         border = const Color(0xFF10B981).withAlpha(80);
         textColor = const Color(0xFF047857);
         icon = Icons.cloud_done_rounded;
-        text = 'Alwaysdata Serwerine Baglanan • Täze duýduryşlar elýeterli';
+        text = 'Onlaýn Serwere Baglanan • Täze duýduryşlar elýeterli';
         break;
       case SyncStatus.syncing:
         bg = const Color(0xFF3B82F6).withAlpha(25);
         border = const Color(0xFF3B82F6).withAlpha(80);
         textColor = const Color(0xFF1D4ED8);
         icon = Icons.sync_rounded;
-        text = 'Alwaysdata-dan täzelenýär…';
+        text = 'Maglumatlar täzelenýär…';
         break;
       case SyncStatus.offline:
       case SyncStatus.idle:
@@ -425,7 +417,7 @@ class _AnnouncementCard extends StatelessWidget {
                           size: 12, color: Color(0xFF0284C7)),
                       Gap(4),
                       Text(
-                        'Alwaysdata Cloud',
+                        'Onlaýn Bulut',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -755,100 +747,6 @@ class _ProfileSettingsView extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Stub Screen ──────────────────────────────────────────────────────────────
-
-class _StubScreen extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-
-  const _StubScreen({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 120,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(title, style: tt.titleLarge?.copyWith(color: Colors.white)),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color, color.withAlpha(180)],
-                  ),
-                ),
-              ),
-            ),
-            backgroundColor: color,
-          ),
-          SliverFillRemaining(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(25),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, size: 48, color: color),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      title,
-                      style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      subtitle,
-                      style: tt.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(20),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: color.withAlpha(60)),
-                      ),
-                      child: Text(
-                        '🚧  Under Construction',
-                        style: tt.labelLarge?.copyWith(color: color),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

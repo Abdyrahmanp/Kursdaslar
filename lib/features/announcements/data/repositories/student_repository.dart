@@ -84,7 +84,7 @@ abstract final class StudentRepository {
         return s;
       }
 
-      bool allTokensMatch = inputTokens.every(
+      final allTokensMatch = inputTokens.every(
         (t) => sTokens.any((st) => st.contains(t) || t.contains(st)),
       );
       if (allTokensMatch) {
@@ -92,6 +92,18 @@ abstract final class StudentRepository {
       }
     }
 
+    return null;
+  }
+
+  /// Finds a student purely by normalized phone number (for session restore).
+  static Student? findStudentByPhone(String phoneInput) {
+    final norm = normalizePhone(phoneInput);
+    for (final s in classStudents) {
+      final sNorm = normalizePhone(s.phone);
+      if (sNorm == norm || (norm.length >= 8 && sNorm.endsWith(norm))) {
+        return s;
+      }
+    }
     return null;
   }
 }

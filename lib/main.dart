@@ -47,7 +47,13 @@ class _FifteenRoot extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     Widget homeScreen;
-    if (!authState.isAuthenticated) {
+    if (!authState.isInitialized) {
+      homeScreen = const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    } else if (!authState.isAuthenticated) {
       homeScreen = const LoginScreen();
     } else if (authState.isStarshy) {
       homeScreen = const FifteenScaffold();

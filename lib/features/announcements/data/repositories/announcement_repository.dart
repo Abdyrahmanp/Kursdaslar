@@ -49,44 +49,7 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
     super.dispose();
   }
 
-  static final List<Announcement> _initialAnnouncements = [
-    Announcement(
-      id: 'ann_01',
-      title: '📢 Ertirki Ders Wagty Özgerdi',
-      content:
-          'Salam topar! Ertir ir bilen sagat 09:00-da bolmaly dersimiz sagat 10:30-a geçirildi. Ähliňiz wagtynda geliň.',
-      senderName: 'Tuşiýewa Abadan (Starşy)',
-      senderPhone: '+993 61 76 28 19',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      recipientCount: 25,
-      isUrgent: true,
-      isOnline: true,
-    ),
-    Announcement(
-      id: 'ann_02',
-      title: '📚 Öý Işi we Amaly Ýapgylar',
-      content:
-          'Matematika we Kompýuter Ylymlary dersi boýunça berlen 3-nji amaly işi şu anna gününe çenli tabşyrmaly.',
-      senderName: 'Tuşiýewa Abadan (Starşy)',
-      senderPhone: '+993 61 76 28 19',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      recipientCount: 25,
-      isUrgent: false,
-      isOnline: true,
-    ),
-    Announcement(
-      id: 'ann_03',
-      title: '🎓 Topar Ýygnagy',
-      content:
-          'Şenbe güni sagat 14:00-da fakultet zalynda umumy topar ýygnagy bolar. Gatnaşmak ähli talyplar üçin hökmanydyr.',
-      senderName: 'Tuşiýewa Abadan (Starşy)',
-      senderPhone: '+993 61 76 28 19',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      recipientCount: 25,
-      isUrgent: false,
-      isOnline: true,
-    ),
-  ];
+  static final List<Announcement> _initialAnnouncements = [];
 
   /// Synchronizes announcements with Alwaysdata Cloud server.
   Future<void> syncWithServer({bool silent = false}) async {
@@ -138,22 +101,26 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
     );
 
     try {
-      final postedItem = await _apiService.postAnnouncement(
+      final ok = await _apiService.postAnnouncement(
         content: content,
         title: effectiveTitle,
         senderName: senderName,
-        senderPhone: senderPhone,
-        recipientCount: recipientCount,
+        senderRole: isUrgent ? 'starshy' : 'student',
         isUrgent: isUrgent,
       );
 
-      state = [postedItem, ...state.where((a) => a.id != postedItem.id)];
-      _ref.read(announcementSyncStatusProvider.notifier).state =
-          SyncStatus.online;
-      return true;
+      if (ok) {
+        state = [localItem, ...state];
+        _ref.read(announcementSyncStatusProvider.notifier).state =
+            SyncStatus.online;
+      } else {
+        state = [localItem, ...state];
+        _ref.read(announcementSyncStatusProvider.notifier).state =
+            SyncStatus.offline;
+      }
+      return ok;
     } catch (e) {
       debugPrint('[AnnouncementNotifier] Failed to send online, saved locally: $e');
-      // Keep local item so Starşy sees it even if network hiccup occurs
       state = [localItem, ...state];
       _ref.read(announcementSyncStatusProvider.notifier).state =
           SyncStatus.offline;
