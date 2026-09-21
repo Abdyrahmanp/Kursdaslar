@@ -1,0 +1,28 @@
+name: Flutter Build APK
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Flutter Kurulumu
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          
+      - run: flutter pub get
+      
+      # Cihaz mimarilerine göre APK'ları bölen sihirli komut:
+      - run: flutter build apk --release --split-per-abi
+      
+      - name: APK Dosyalarını Yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: split-apks
+          # Klasör içindeki tüm bölünmüş APK'ları toplamak için yıldız (*) koyduk:
+          path: build/app/outputs/flutter-apk/*.apk
