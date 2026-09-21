@@ -146,7 +146,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       role: senderRole,
     );
 
-    // Ekrana derrew çykar
+    // Ekrana derrew çykar (optimistic UI)
     state = [...state, localMsg];
 
     final ok = await _apiService.sendMessage(
@@ -156,10 +156,29 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     );
 
     if (ok) {
-      // Serwerdäki iň soňky täze hatlary derrew sorap al
-      await _pollNewMessages();
+      // Serwerdäki täze hatlary al
+      final newMessages = await _apiService.fetchNewMessages(_lastSeenId);
+
+      // Temp mesajy aýyr + hakyky serwer hatlaryny BIR GEZEKDE goş (titreme ýok)
+      final withoutTemp = state.where((m) => m.id != tempId).toList();
+      if (newMessages.isNotEmpty) {
+        final existingIds = withoutTemp.map((m) => m.id).toSet();
+        final filtered =
+            newMessages.where((m) => !existingIds.contains(m.id)).toList();
+        if (filtered.isNotEmpty) {
+          final updated = [...withoutTemp, ...filtered];
+          state = updated; // ← ýeke setState: temp gidýär + hakyky gelýär
+          _updateLastSeenId(filtered);
+          await _saveCachedMessages(updated);
+        } else {
+          state = withoutTemp;
+        }
+      } else {
+        // Polling boş gelse temp aýyr
+        state = withoutTemp;
+      }
     } else {
-      // Ugradyp bolmadyk bolsa arassala
+      // Ugradyp bolmadyk bolsa temp mesajy arassala
       state = state.where((m) => m.id != tempId).toList();
     }
     return ok;
