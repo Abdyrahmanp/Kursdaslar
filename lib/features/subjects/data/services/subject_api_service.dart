@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:topar_115/core/constants/app_constants.dart';
+import 'package:topar_115/core/network/byethost_http_client.dart';
 import '../models/subject_model.dart';
 import '../models/topic_model.dart';
 
 class SubjectApiService {
   final http.Client _client;
 
-  SubjectApiService({http.Client? client}) : _client = client ?? http.Client();
+  SubjectApiService({http.Client? client}) : _client = client ?? ByethostHttpClient();
 
   static final Uri _subjectsUri = Uri.parse(AppConstants.subjectsUrl);
 

@@ -33,17 +33,17 @@ abstract final class AppConstants {
   /// Announcements endpoint
   static const String announcementsUrl = '$apiBaseUrl/announcements.php';
 
-  /// Chat endpoint (short polling)
-  static const String chatUrl = '$apiBaseUrl/chat.php';
+  /// Chat endpoint (short polling — messages.php Byethost 403 engeline düşmez)
+  static const String chatUrl = '$apiBaseUrl/messages.php';
 
   /// Subjects & Topics endpoint
   static const String subjectsUrl = '$apiBaseUrl/subjects.php';
 
   /// Timeout for API network requests.
-  static const Duration apiTimeout = Duration(seconds: 10);
+  static const Duration apiTimeout = Duration(seconds: 15);
 
-  /// Chat polling interval — her 3 saniyede bir yeni mesaj sorgulanır.
-  static const Duration chatPollInterval = Duration(seconds: 3);
+  /// Chat polling interval — her 5 saniyede bir yeni mesaj sorgulanır (Byethost limitini korumak için).
+  static const Duration chatPollInterval = Duration(seconds: 5);
 
   /// Announcements auto-sync interval.
   static const Duration autoSyncInterval = Duration(seconds: 20);

@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:topar_115/core/constants/app_constants.dart';
+import 'package:topar_115/core/network/byethost_http_client.dart';
 import '../models/announcement_model.dart';
 
 class AnnouncementApiService {
   final http.Client _client;
 
   AnnouncementApiService({http.Client? client})
-      : _client = client ?? http.Client();
+      : _client = client ?? ByethostHttpClient();
 
   static final Uri _annUri = Uri.parse(AppConstants.announcementsUrl);
 
