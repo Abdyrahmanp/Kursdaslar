@@ -22,6 +22,9 @@ $type    = $_GET['type'] ?? $bodyRaw['type'] ?? 'topics';
 if ($method === 'GET') {
 
     if ($type === 'subjects') {
+        // Otomatik bozuk harf onarımı (I?lis -> Iňlis)
+        $db->query("UPDATE subjects SET name = 'Iňlis dili' WHERE code = 'ENG' AND (name LIKE '%?%' OR name = 'I?lis dili')");
+
         // Tüm dersleri getir
         $res = $db->query('SELECT id, code, name, teacher FROM subjects ORDER BY id ASC');
         $rows = [];

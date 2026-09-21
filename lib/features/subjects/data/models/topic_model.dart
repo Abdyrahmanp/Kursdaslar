@@ -27,10 +27,12 @@ class Topic {
   bool get hasHomework => homework.trim().isNotEmpty;
 
   factory Topic.fromJson(Map<String, dynamic> json) {
+    final rawSubName = json['subject_name']?.toString() ?? json['subjectName']?.toString() ?? '';
+    final fixedSubName = rawSubName.replaceAll('I?lis', 'Iňlis').replaceAll('i?lis', 'iňlis');
     return Topic(
       id: json['id']?.toString() ?? '',
       subjectId: json['subject_id']?.toString() ?? json['subjectId']?.toString() ?? '',
-      subjectName: json['subject_name']?.toString() ?? json['subjectName']?.toString() ?? '',
+      subjectName: fixedSubName,
       subjectCode: json['subject_code']?.toString() ?? json['subjectCode']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       content: json['content']?.toString() ?? '',

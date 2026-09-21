@@ -60,10 +60,11 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   // ── Dispatch Handler ──────────────────────────────────────────────────────
 
   Future<void> _handleDispatch() async {
+    if (_isPostingOnline || _dialogOpen) return;
     final message = _msgCtrl.text.trim();
     if (message.isEmpty) return;
 
-    // ── Mode 1: Online Only (Alwaysdata Cloud Server) ──────────────────────
+    // ── Mode 1: Online Only (Byethost Cloud Server) ──────────────────────
     if (_dispatchMode == DispatchMode.online) {
       setState(() => _isPostingOnline = true);
       HapticUtils.medium();
@@ -71,55 +72,59 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       final selectedCount = ref.read(smsDispatcherProvider).selectedIds.length;
       final count = selectedCount == 0 ? 25 : selectedCount;
 
-      final success = await ref
-          .read(announcementProvider.notifier)
-          .sendOnlineAnnouncement(
-            content: message,
-            isUrgent: _isUrgent,
-            recipientCount: count,
-          );
+      try {
+        final success = await ref
+            .read(announcementProvider.notifier)
+            .sendOnlineAnnouncement(
+              content: message,
+              isUrgent: _isUrgent,
+              recipientCount: count,
+            );
 
-      setState(() => _isPostingOnline = false);
-
-      if (mounted) {
-        _msgCtrl.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  success ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
-                  color: Colors.white,
-                ),
-                const Gap(10),
-                Expanded(
-                  child: Text(
-                    success
-                        ? '🌐 Duýduryş onlaýn serwere ugradyldy! Talyplar derrew görer.'
-                        : '⚠️ Serwere ugradylmady, emma ýerli ýatda saklandy.',
+        if (mounted) {
+          _msgCtrl.clear();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(
+                    success ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                    color: Colors.white,
                   ),
-                ),
-              ],
+                  const Gap(10),
+                  Expanded(
+                    child: Text(
+                      success
+                          ? '🌐 Duýduryş onlaýn serwere ugradyldy! Talyplar derrew görer.'
+                          : '⚠️ Serwere ugradylmady, emma ýerli ýatda saklandy.',
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor:
+                  success ? const Color(0xFF059669) : Colors.orange.shade800,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor:
-                success ? const Color(0xFF059669) : Colors.orange.shade800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isPostingOnline = false);
+        }
       }
       return;
     }
 
     // ── Mode 2: Dual Mode (Post Online + SMS Dispatch) ───────────────────────
     if (_dispatchMode == DispatchMode.dual) {
+      setState(() => _isPostingOnline = true);
       final selectedCount = ref.read(smsDispatcherProvider).selectedIds.length;
       final count = selectedCount == 0 ? 25 : selectedCount;
 
-      // Asynchronously post to Alwaysdata in the background
       ref.read(announcementProvider.notifier).sendOnlineAnnouncement(
             content: message,
             isUrgent: _isUrgent,
@@ -130,7 +135,13 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     // ── SMS Dispatch Loop ───────────────────────────────────────────────────
     if (_dialogOpen) return;
     _dialogOpen = true;
-    await ref.read(smsDispatcherProvider.notifier).dispatch();
+    try {
+      await ref.read(smsDispatcherProvider.notifier).dispatch();
+    } finally {
+      if (mounted) {
+        setState(() => _isPostingOnline = false);
+      }
+    }
   }
 
   // ── Main Build ────────────────────────────────────────────────────────────

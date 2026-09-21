@@ -17,9 +17,11 @@ class Subject {
   });
 
   factory Subject.fromJson(Map<String, dynamic> json) {
+    final rawName = json['name']?.toString() ?? '';
+    final fixedName = rawName.replaceAll('I?lis', 'Iňlis').replaceAll('i?lis', 'iňlis');
     return Subject(
       id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
+      name: fixedName,
       code: json['code']?.toString() ?? '',
       teacherName: json['teacher_name']?.toString() ??
           json['teacher']?.toString() ??

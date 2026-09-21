@@ -29,6 +29,7 @@ class SubjectsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
+        bool isSubmitting = false;
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Padding(
@@ -128,46 +129,62 @@ class SubjectsScreen extends ConsumerWidget {
                       width: double.infinity,
                       height: 50,
                       child: FilledButton.icon(
-                        icon: const Icon(Icons.check_rounded),
-                        label: const Text('Temany Ýatda Sakla'),
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_rounded),
+                        label: Text(isSubmitting ? 'Ýüklenýär…' : 'Temany Ýatda Sakla'),
                         style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        onPressed: () async {
-                          if (titleCtrl.text.trim().isEmpty) return;
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (titleCtrl.text.trim().isEmpty) return;
+                                setModalState(() => isSubmitting = true);
 
-                          final creator = authState.currentStudent?.name ??
-                              'Tuşiýewa Abadan (Starşy)';
+                                try {
+                                  final creator = authState.currentStudent?.name ??
+                                      'Tuşiýewa Abadan (Starşy)';
 
-                          final ok = await ref.read(subjectsProvider.notifier).addTopic(
-                                subjectId: selectedSubjectId,
-                                title: titleCtrl.text.trim(),
-                                content: contentCtrl.text.trim(),
-                                homework: homeworkCtrl.text.trim(),
-                                createdBy: creator,
-                              );
+                                  final ok = await ref.read(subjectsProvider.notifier).addTopic(
+                                        subjectId: selectedSubjectId,
+                                        title: titleCtrl.text.trim(),
+                                        content: contentCtrl.text.trim(),
+                                        homework: homeworkCtrl.text.trim(),
+                                        createdBy: creator,
+                                      );
 
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            HapticUtils.medium();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  ok
-                                      ? '🎉 Täze tema serwere üstünlikli goşuldy!'
-                                      : '💾 Tema goşuldy we telefonyňyzda saklandy!',
-                                ),
-                                backgroundColor: ok ? const Color(0xFF059669) : Colors.orange.shade800,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    HapticUtils.medium();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          ok
+                                              ? '🎉 Täze tema serwere üstünlikli goşuldy!'
+                                              : '💾 Tema goşuldy we telefonyňyzda saklandy!',
+                                        ),
+                                        backgroundColor: ok ? const Color(0xFF059669) : Colors.orange.shade800,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  setModalState(() => isSubmitting = false);
+                                }
+                              },
                       ),
                     ),
                   ],

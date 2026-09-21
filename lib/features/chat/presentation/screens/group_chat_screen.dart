@@ -17,6 +17,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   bool _canSend = false;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }
 
   Future<void> _handleSend() async {
+    if (_isSending) return;
     final text = _msgCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -61,16 +63,22 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final senderName = student?.name ?? 'Talyp';
     final role = authState.isStarshy ? 'starshy' : 'student';
 
+    setState(() => _isSending = true);
     _msgCtrl.clear();
     HapticUtils.light();
 
-    await ref.read(chatProvider.notifier).sendMessage(
-          senderName: senderName,
-          senderRole: role,
-          message: text,
-        );
-
-    _scrollToBottom();
+    try {
+      await ref.read(chatProvider.notifier).sendMessage(
+            senderName: senderName,
+            senderRole: role,
+            message: text,
+          );
+      _scrollToBottom();
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
   }
 
   @override
@@ -290,9 +298,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _canSend ? cs.primary : cs.surfaceContainerHighest,
+                color: (_canSend && !_isSending) ? cs.primary : cs.surfaceContainerHighest,
                 shape: BoxShape.circle,
-                boxShadow: _canSend
+                boxShadow: (_canSend && !_isSending)
                     ? [
                         BoxShadow(
                           color: cs.primary.withAlpha(90),
@@ -306,11 +314,22 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 color: Colors.transparent,
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: _canSend ? _handleSend : null,
-                  child: Icon(
-                    Icons.send_rounded,
-                    size: 20,
-                    color: _canSend ? Colors.white : cs.onSurfaceVariant.withAlpha(120),
+                  onTap: (_canSend && !_isSending) ? _handleSend : null,
+                  child: Center(
+                    child: _isSending
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: cs.primary,
+                            ),
+                          )
+                        : Icon(
+                            Icons.send_rounded,
+                            size: 20,
+                            color: _canSend ? Colors.white : cs.onSurfaceVariant.withAlpha(120),
+                          ),
                   ),
                 ),
               ),
