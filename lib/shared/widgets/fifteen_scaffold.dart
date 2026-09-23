@@ -4,6 +4,7 @@ import 'package:topar_115/features/announcements/presentation/screens/announceme
 import 'package:topar_115/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:topar_115/features/settings/presentation/screens/settings_screen.dart';
 import 'package:topar_115/features/subjects/presentation/screens/subjects_screen.dart';
+import 'package:topar_115/features/timetable/presentation/screens/timetable_screen.dart';
 
 // ── Active Tab Provider ───────────────────────────────────────────────────────
 
@@ -11,13 +12,14 @@ final activeTabProvider = StateProvider<int>((ref) => 0);
 
 // ── Main Navigation Shell ─────────────────────────────────────────────────────
 
-/// Root scaffold that hosts the 4-tab [NavigationBar] and [IndexedStack].
+/// Root scaffold that hosts the 5-tab [NavigationBar] and [IndexedStack].
 ///
 /// Tabs:
 ///   0 — Duýduryşlar (Announcements)
 ///   1 — Topar Chat (Group Chat)
-///   2 — Sapak Temalary (Subjects & Lessons)
-///   3 — Sazlamalar (Settings)
+///   2 — Raspisanie (Timetable)
+///   3 — Sapak Temalary (Subjects & Lessons)
+///   4 — Sazlamalar (Settings)
 class FifteenScaffold extends ConsumerWidget {
   const FifteenScaffold({super.key});
 
@@ -33,6 +35,7 @@ class FifteenScaffold extends ConsumerWidget {
         children: const [
           AnnouncementsScreen(),
           GroupChatScreen(),
+          TimetableScreen(),
           SubjectsScreen(),
           SettingsScreen(),
         ],
@@ -73,6 +76,11 @@ class _FifteenNavBar extends StatelessWidget {
           label: 'Chat',
         ),
         NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_today_rounded),
+          label: 'Raspisanie',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.menu_book_outlined),
           selectedIcon: Icon(Icons.menu_book_rounded),
           label: 'Sapaklar',
@@ -86,4 +94,3 @@ class _FifteenNavBar extends StatelessWidget {
     );
   }
 }
-

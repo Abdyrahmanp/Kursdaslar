@@ -16,13 +16,10 @@ class SubjectApiService {
   // ── Tüm dersleri getir ────────────────────────────────────────────────────
   Future<List<Subject>> fetchSubjects() async {
     try {
-      final uri = _subjectsUri.replace(
-        queryParameters: {'type': 'subjects'},
-      );
+      final uri = _subjectsUri.replace(queryParameters: {'type': 'subjects'});
       final response = await _client
           .get(uri, headers: {'Accept': 'application/json'})
           .timeout(AppConstants.apiTimeout);
-
       if (response.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded is Map && decoded['data'] is List) {
@@ -41,13 +38,10 @@ class SubjectApiService {
   // ── Tüm temaları getir ────────────────────────────────────────────────────
   Future<List<Topic>> fetchAllTopics() async {
     try {
-      final uri = _subjectsUri.replace(
-        queryParameters: {'type': 'topics'},
-      );
+      final uri = _subjectsUri.replace(queryParameters: {'type': 'topics'});
       final response = await _client
           .get(uri, headers: {'Accept': 'application/json'})
           .timeout(AppConstants.apiTimeout);
-
       if (response.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded is Map && decoded['data'] is List) {
@@ -67,12 +61,10 @@ class SubjectApiService {
   Future<List<Topic>> fetchTopicsForSubject(String subjectId) async {
     try {
       final uri = _subjectsUri.replace(
-        queryParameters: {'type': 'topics', 'subject': subjectId},
-      );
+          queryParameters: {'type': 'topics', 'subject': subjectId});
       final response = await _client
           .get(uri, headers: {'Accept': 'application/json'})
           .timeout(AppConstants.apiTimeout);
-
       if (response.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded is Map && decoded['data'] is List) {
@@ -106,7 +98,7 @@ class SubjectApiService {
               'Accept': 'application/json',
             },
             body: jsonEncode({
-              'type': 'topic', // ekstra guvenlik ucin body'e hem goshyas
+              'type': 'topic',
               'subject_id': int.tryParse(subjectId) ?? 0,
               'title': title,
               'content': content,
@@ -118,16 +110,60 @@ class SubjectApiService {
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-        if (decoded is Map && decoded['success'] == true) {
-          return true;
-        }
+        if (decoded is Map && decoded['success'] == true) return true;
         debugPrint('[SubjectApiService] createTopic server error: ${decoded['error']}');
         return false;
       }
-      debugPrint('[SubjectApiService] createTopic HTTP ${response.statusCode}: ${response.body}');
+      debugPrint('[SubjectApiService] createTopic HTTP ${response.statusCode}');
       return false;
     } catch (e) {
       debugPrint('[SubjectApiService] createTopic error: $e');
+      return false;
+    }
+  }
+
+  // ── Tema sil ─────────────────────────────────────────────────────────────
+  Future<bool> deleteTopic(String topicId) async {
+    try {
+      final uri = _subjectsUri.replace(
+          queryParameters: {'type': 'topic', 'id': topicId});
+      final response = await _client
+          .delete(uri, headers: {'Accept': 'application/json'})
+          .timeout(AppConstants.apiTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SubjectApiService] deleteTopic error: $e');
+      return false;
+    }
+  }
+
+  // ── Tema düzenle ─────────────────────────────────────────────────────────
+  Future<bool> editTopic({
+    required String topicId,
+    required String title,
+    required String content,
+    String homework = '',
+  }) async {
+    try {
+      final uri = _subjectsUri.replace(queryParameters: {'type': 'topic'});
+      final response = await _client
+          .put(
+            uri,
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'id': topicId,
+              'title': title,
+              'content': content,
+              'homework': homework,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[SubjectApiService] editTopic error: $e');
       return false;
     }
   }

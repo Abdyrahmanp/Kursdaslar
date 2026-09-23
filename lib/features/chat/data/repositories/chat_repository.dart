@@ -65,11 +65,14 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   Future<void> _saveCachedMessages(List<ChatMessage> messages) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Iň soňky 80 haty sakla
-      final toSave = messages.length > 80
-          ? messages.sublist(messages.length - 80)
-          : messages;
-      final raw = jsonEncode(toSave.map((m) => m.toJson()).toList());
+      // Pending/failed hatlary cache-e goşma — diňe hakyky hatlary sakla
+      final toSave = messages
+          .where((m) => !m.isPending && !m.isFailed)
+          .toList();
+      final limited = toSave.length > 80
+          ? toSave.sublist(toSave.length - 80)
+          : toSave;
+      final raw = jsonEncode(limited.map((m) => m.toJson()).toList());
       await prefs.setString(_prefKeyChatCache, raw);
     } catch (e) {
       debugPrint('[ChatNotifier] Save cache error: $e');
@@ -90,7 +93,9 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     try {
       final messages = await _apiService.fetchMessages(limit: 60);
       if (messages.isNotEmpty) {
-        state = messages;
+        // Pending hatlary sakla, server'dan gelen confirmed hatlara ekle
+        final pendingMsgs = state.where((m) => m.isPending).toList();
+        state = [...messages, ...pendingMsgs];
         _updateLastSeenId(messages);
         await _saveCachedMessages(messages);
       }
@@ -109,14 +114,21 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       final newMessages = await _apiService.fetchNewMessages(_lastSeenId);
       if (newMessages.isNotEmpty) {
         // Gaýtalanýan hat bolmazlygy üçin barla
-        final existingIds = state.map((m) => m.id).toSet();
+        final existingIds = state
+            .where((m) => !m.isPending && !m.isFailed)
+            .map((m) => m.id)
+            .toSet();
         final filtered = newMessages.where((m) => !existingIds.contains(m.id)).toList();
 
         if (filtered.isNotEmpty) {
-          final updated = [...state, ...filtered];
+          // Pending hatlary sakla
+          final pendingMsgs = state.where((m) => m.isPending).toList();
+          final withoutPending = state.where((m) => !m.isPending).toList();
+          final updated = [...withoutPending, ...filtered, ...pendingMsgs];
           state = updated;
           _updateLastSeenId(filtered);
-          await _saveCachedMessages(updated);
+          final toCache = updated.where((m) => !m.isPending && !m.isFailed).toList();
+          await _saveCachedMessages(toCache);
         }
       }
     } catch (_) {
@@ -135,6 +147,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     required String senderName,
     required String senderRole,
     required String message,
+    ReplyInfo? replyTo,
   }) async {
     final tempId = 'tmp_${DateTime.now().millisecondsSinceEpoch}';
     final localMsg = ChatMessage(
@@ -144,15 +157,21 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       message: message,
       timestamp: DateTime.now(),
       role: senderRole,
+      isPending: true,   // ← Gönderilmekte göstergesi
+      isFailed: false,
+      replyTo: replyTo,
     );
 
-    // Ekrana derrew çykar (optimistic UI)
+    // Ekrana derrew çykar (optimistic UI) — "pending" halynda
     state = [...state, localMsg];
 
     final ok = await _apiService.sendMessage(
       senderName: senderName,
       senderRole: senderRole,
       message: message,
+      replyToId: replyTo?.messageId,
+      replyToName: replyTo?.senderName,
+      replyToText: replyTo?.message,
     );
 
     if (ok) {
@@ -162,7 +181,10 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       // Temp mesajy aýyr + hakyky serwer hatlaryny BIR GEZEKDE goş (titreme ýok)
       final withoutTemp = state.where((m) => m.id != tempId).toList();
       if (newMessages.isNotEmpty) {
-        final existingIds = withoutTemp.map((m) => m.id).toSet();
+        final existingIds = withoutTemp
+            .where((m) => !m.isPending)
+            .map((m) => m.id)
+            .toSet();
         final filtered =
             newMessages.where((m) => !existingIds.contains(m.id)).toList();
         if (filtered.isNotEmpty) {
@@ -174,14 +196,88 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
           state = withoutTemp;
         }
       } else {
-        // Polling boş gelse temp aýyr
         state = withoutTemp;
       }
     } else {
-      // Ugradyp bolmadyk bolsa temp mesajy arassala
-      state = state.where((m) => m.id != tempId).toList();
+      // Ugradyp bolmadyk bolsa "failed" haly görkezýär — aýyrmaýar!
+      state = state.map((m) {
+        if (m.id == tempId) {
+          return m.copyWith(isPending: false, isFailed: true);
+        }
+        return m;
+      }).toList();
     }
     return ok;
+  }
+
+  /// Başarısız mesajı yeniden gönder
+  Future<void> retryMessage(String tempId) async {
+    final failedMsg = state.where((m) => m.id == tempId).firstOrNull;
+    if (failedMsg == null) return;
+
+    // failed → pending
+    state = state.map((m) {
+      if (m.id == tempId) return m.copyWith(isPending: true, isFailed: false);
+      return m;
+    }).toList();
+
+    final ok = await _apiService.sendMessage(
+      senderName: failedMsg.senderName,
+      senderRole: failedMsg.role,
+      message: failedMsg.message,
+      replyToId: failedMsg.replyTo?.messageId,
+      replyToName: failedMsg.replyTo?.senderName,
+      replyToText: failedMsg.replyTo?.message,
+    );
+
+    if (ok) {
+      // Başarılı — temp'i kaldır, server'dan al
+      final newMessages = await _apiService.fetchNewMessages(_lastSeenId);
+      final withoutTemp = state.where((m) => m.id != tempId).toList();
+      if (newMessages.isNotEmpty) {
+        final existingIds = withoutTemp.map((m) => m.id).toSet();
+        final filtered = newMessages.where((m) => !existingIds.contains(m.id)).toList();
+        final updated = filtered.isNotEmpty ? [...withoutTemp, ...filtered] : withoutTemp;
+        state = updated;
+        _updateLastSeenId(filtered);
+        await _saveCachedMessages(updated);
+      } else {
+        state = withoutTemp;
+      }
+    } else {
+      // Yine başarısız
+      state = state.map((m) {
+        if (m.id == tempId) return m.copyWith(isPending: false, isFailed: true);
+        return m;
+      }).toList();
+    }
+  }
+
+  /// Mesaj silmek (yerel + server)
+  Future<void> deleteMessage(String messageId) async {
+    // Önce yerel listeden kaldır (anlık)
+    state = state.where((m) => m.id != messageId).toList();
+    await _saveCachedMessages(state);
+
+    // Server'dan da sil (başarısız olsa bile yerel zaten silindi)
+    if (!messageId.startsWith('tmp_')) {
+      await _apiService.deleteMessage(messageId);
+    }
+  }
+
+  /// Mesaj düzenlemek (yerel + server)
+  Future<void> editMessage(String messageId, String newText) async {
+    // Yerel listede güncelle
+    state = state.map((m) {
+      if (m.id == messageId) return m.copyWith(message: newText);
+      return m;
+    }).toList();
+    await _saveCachedMessages(state);
+
+    // Server'da güncelle
+    if (!messageId.startsWith('tmp_')) {
+      await _apiService.editMessage(messageId, newText);
+    }
   }
 }
 
@@ -190,3 +286,4 @@ final chatProvider =
   final apiService = ref.watch(chatApiServiceProvider);
   return ChatNotifier(apiService);
 });
+

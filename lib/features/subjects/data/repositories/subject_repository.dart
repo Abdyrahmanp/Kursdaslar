@@ -237,6 +237,55 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
     // Eger serwer ugratmak başartmadyk hem bolsa, localTopic saklanyp galýar (ýitmeyär!)
     return false;
   }
+
+  /// Temany poz (lokal + server)
+  Future<void> deleteTopic(String topicId) async {
+    // Hemen lokal listeden çıkar
+    final updatedList = state.topics.where((t) => t.id != topicId).toList();
+    state = state.copyWith(topics: updatedList);
+    await _saveCachedTopics(updatedList);
+
+    // Server'dan da sil (tmp_ id'ler server'da yok, atla)
+    if (!topicId.startsWith('tmp_')) {
+      await _apiService.deleteTopic(topicId);
+    }
+  }
+
+  /// Temany üýtget (lokal + server)
+  Future<void> editTopic({
+    required String topicId,
+    required String title,
+    required String content,
+    String homework = '',
+  }) async {
+    // Hemen lokal listede güncelle
+    final updatedList = state.topics.map((t) {
+      if (t.id != topicId) return t;
+      return Topic(
+        id: t.id,
+        subjectId: t.subjectId,
+        subjectName: t.subjectName,
+        subjectCode: t.subjectCode,
+        title: title,
+        content: content,
+        homework: homework,
+        date: t.date,
+        createdBy: t.createdBy,
+      );
+    }).toList();
+    state = state.copyWith(topics: updatedList);
+    await _saveCachedTopics(updatedList);
+
+    // Server'da güncelle
+    if (!topicId.startsWith('tmp_')) {
+      await _apiService.editTopic(
+        topicId: topicId,
+        title: title,
+        content: content,
+        homework: homework,
+      );
+    }
+  }
 }
 
 final subjectsProvider =

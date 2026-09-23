@@ -11,16 +11,18 @@ import 'package:topar_115/features/announcements/presentation/widgets/recipient_
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:topar_115/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:topar_115/features/subjects/presentation/screens/subjects_screen.dart';
+import 'package:topar_115/features/timetable/presentation/screens/timetable_screen.dart';
 
 final normalTabProvider = StateProvider<int>((ref) => 0);
 
 /// Normal Student View Scaffold.
 ///
-/// Shares the exact 4-tab NavigationBar structure as the Starşy screen ([FifteenScaffold]):
+/// 5-tab NavigationBar:
 ///   0 — Duyduryşlar (Read-only view of notices from Starşy)
 ///   1 — Chat        (Real-time Group Chat)
-///   2 — Sapaklar    (Subjects & Lesson Topics)
-///   3 — Sazlamalar  (Settings, Profile, Roster & Logout)
+///   2 — Raspisanie  (Timetable)
+///   3 — Sapaklar    (Subjects & Lesson Topics)
+///   4 — Sazlamalar  (Settings, Profile, Roster & Logout)
 class NormalStudentScreen extends ConsumerWidget {
   const NormalStudentScreen({super.key});
 
@@ -36,6 +38,7 @@ class NormalStudentScreen extends ConsumerWidget {
         children: const [
           _AnnouncementsView(),
           GroupChatScreen(),
+          TimetableScreen(),
           SubjectsScreen(),
           _ProfileSettingsView(),
         ],
@@ -59,6 +62,11 @@ class NormalStudentScreen extends ConsumerWidget {
             label: 'Chat',
           ),
           NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today_rounded),
+            label: 'Raspisanie',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book_rounded),
             label: 'Sapaklar',
@@ -73,7 +81,6 @@ class NormalStudentScreen extends ConsumerWidget {
     );
   }
 }
-
 // ── 1. Announcements View for Normal Students ───────────────────────────────
 
 class _AnnouncementsView extends ConsumerWidget {

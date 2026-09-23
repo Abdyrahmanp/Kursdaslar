@@ -67,8 +67,20 @@ class ChatApiService {
     required String senderName,
     required String senderRole,
     required String message,
+    String? replyToId,
+    String? replyToName,
+    String? replyToText,
   }) async {
     try {
+      final body = {
+        'sender_name': senderName,
+        'sender_role': senderRole,
+        'message': message,
+        if (replyToId != null && replyToId.isNotEmpty) 'reply_to_id': replyToId,
+        if (replyToName != null && replyToName.isNotEmpty) 'reply_to_name': replyToName,
+        if (replyToText != null && replyToText.isNotEmpty) 'reply_to_text': replyToText,
+      };
+
       final response = await _client
           .post(
             _chatUri,
@@ -76,11 +88,7 @@ class ChatApiService {
               'Content-Type': 'application/json; charset=utf-8',
               'Accept': 'application/json',
             },
-            body: jsonEncode({
-              'sender_name': senderName,
-              'sender_role': senderRole,
-              'message': message,
-            }),
+            body: jsonEncode(body),
           )
           .timeout(AppConstants.apiTimeout);
 
@@ -91,5 +99,47 @@ class ChatApiService {
     }
   }
 
+  // ── Mesaj sil ─────────────────────────────────────────────────────────────
+  Future<bool> deleteMessage(String messageId) async {
+    try {
+      final uri = _chatUri.replace(
+        queryParameters: {'id': messageId},
+      );
+      final response = await _client
+          .delete(uri, headers: {'Accept': 'application/json'})
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ChatApiService] deleteMessage error: $e');
+      return false;
+    }
+  }
+
+  // ── Mesaj düzenle ─────────────────────────────────────────────────────────
+  Future<bool> editMessage(String messageId, String newText) async {
+    try {
+      final response = await _client
+          .put(
+            _chatUri,
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'id': messageId,
+              'message': newText,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[ChatApiService] editMessage error: $e');
+      return false;
+    }
+  }
+
   void dispose() => _client.close();
 }
+

@@ -163,4 +163,57 @@ if ($method === 'POST') {
     jsonError('Näbelli type: ' . htmlspecialchars($type));
 }
 
+// ══════════════════════════════════════════════
+//  DELETE — Temany poz
+// ══════════════════════════════════════════════
+if ($method === 'DELETE') {
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    if ($id <= 0) {
+        jsonError('Geçerli ID gerekli!', 400);
+    }
+
+    $stmt = $db->prepare('DELETE FROM topics WHERE id = ?');
+    $stmt->bind_param('i', $id);
+
+    if ($stmt->execute()) {
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+        $db->close();
+        if ($affected > 0) {
+            jsonOk(['message' => 'Tema pozuldy!']);
+        } else {
+            jsonError('Tema tapylmady!', 404);
+        }
+    } else {
+        jsonError('DB ýazma hatasy: ' . $db->error, 500);
+    }
+}
+
+// ══════════════════════════════════════════════
+//  PUT — Temany üýtget
+// ══════════════════════════════════════════════
+if ($method === 'PUT') {
+    $body     = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id       = (int)($body['id'] ?? 0);
+    $title    = trim($body['title']    ?? '');
+    $content  = trim($body['content']  ?? '');
+    $homework = trim($body['homework'] ?? '');
+
+    if ($id <= 0 || $title === '') {
+        jsonError('ID we temany doldurmaly!', 400);
+    }
+
+    $stmt = $db->prepare('UPDATE topics SET title = ?, content = ?, homework = ? WHERE id = ?');
+    $stmt->bind_param('sssi', $title, $content, $homework, $id);
+
+    if ($stmt->execute()) {
+        $stmt->close();
+        $db->close();
+        jsonOk(['message' => 'Tema üýtgedildi!']);
+    } else {
+        jsonError('DB ýazma hatasy: ' . $db->error, 500);
+    }
+}
+
 jsonError('Rugsat berilmedik usul', 405);
+
