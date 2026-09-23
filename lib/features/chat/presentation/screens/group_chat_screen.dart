@@ -387,30 +387,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                 msg.senderPhone.isNotEmpty &&
                                 msg.senderPhone == currentPhone);
 
-                        // Sağa süýşürip jogap bermek (Swipe to Reply)
-                        return Dismissible(
-                          key: ValueKey('msg_${msg.id}_${msg.timestamp.millisecondsSinceEpoch}'),
-                          direction: DismissDirection.startToEnd,
-                          confirmDismiss: (direction) async {
-                            _setReply(msg);
-                            return false; // Pozulmaýar, diňe jogap bermek trigger bolýar
-                          },
-                          background: Container(
-                            alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.only(left: 18),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: cs.primary.withAlpha(30),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.reply_rounded,
-                                color: cs.primary,
-                                size: 22,
-                              ),
-                            ),
-                          ),
+                        // Sağa süýşürip jogap bermek (Bounded Swipe to Reply)
+                        return _SwipeToReply(
+                          onReply: () => _setReply(msg),
                           child: _ChatMessageBubble(
                             message: msg,
                             isMe: isMe,
@@ -642,6 +621,122 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Bounded Swipe to Reply ──────────────────────────────────────────────────
+
+class _SwipeToReply extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onReply;
+
+  const _SwipeToReply({
+    super.key,
+    required this.child,
+    required this.onReply,
+  });
+
+  @override
+  State<_SwipeToReply> createState() => _SwipeToReplyState();
+}
+
+class _SwipeToReplyState extends State<_SwipeToReply>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  Animation<double>? _animation;
+  double _dragOffset = 0.0;
+  static const double _maxDragOffset = 64.0; // Strictly bounded range
+  static const double _triggerThreshold = 38.0;
+  bool _hasTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if ((details.primaryDelta ?? 0) > 0 || _dragOffset > 0) {
+      final delta = details.primaryDelta ?? 0;
+      double newOffset = _dragOffset + delta;
+      if (newOffset < 0) newOffset = 0;
+      if (newOffset > _maxDragOffset) {
+        // Friction when pulled beyond max
+        newOffset = _maxDragOffset + (newOffset - _maxDragOffset) * 0.1;
+      }
+      setState(() {
+        _dragOffset = newOffset;
+        if (_dragOffset >= _triggerThreshold && !_hasTriggered) {
+          _hasTriggered = true;
+          HapticUtils.light();
+        }
+      });
+    }
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_hasTriggered) {
+      widget.onReply();
+    }
+    _hasTriggered = false;
+    _animation = Tween<double>(begin: _dragOffset, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    )..addListener(() {
+        setState(() => _dragOffset = _animation!.value);
+      });
+    _controller.forward(from: 0.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final progress = (_dragOffset / _triggerThreshold).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+      onHorizontalDragEnd: _onHorizontalDragEnd,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          if (_dragOffset > 4)
+            Positioned(
+              left: 12,
+              child: Opacity(
+                opacity: progress,
+                child: Transform.scale(
+                  scale: 0.5 + 0.5 * progress,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: _hasTriggered ? cs.primary : cs.primary.withAlpha(50),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.reply_rounded,
+                      color: _hasTriggered ? Colors.white : cs.primary,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
+            child: widget.child,
           ),
         ],
       ),

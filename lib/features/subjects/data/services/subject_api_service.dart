@@ -114,7 +114,7 @@ class SubjectApiService {
         debugPrint('[SubjectApiService] createTopic server error: ${decoded['error']}');
         return false;
       }
-      debugPrint('[SubjectApiService] createTopic HTTP ${response.statusCode}');
+      debugPrint('[SubjectApiService] createTopic HTTP ${response.statusCode}: ${response.body}');
       return false;
     } catch (e) {
       debugPrint('[SubjectApiService] createTopic error: $e');

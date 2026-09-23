@@ -636,9 +636,25 @@ class _TopicCard extends ConsumerWidget {
                     ),
                   ),
                   if (canManage) ...[
-                    const Gap(6),
-                    Icon(Icons.more_vert_rounded,
-                        size: 16, color: cs.onSurfaceVariant.withAlpha(120)),
+                    const Gap(2),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          HapticUtils.light();
+                          _showTopicMenu(context, ref);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.more_vert_rounded,
+                            size: 20,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -745,37 +761,237 @@ class _TopicCard extends ConsumerWidget {
     );
   }
 }
+
 /// ── Tema Doly Okama Ekrany (Full-screen Topic Reader) ─────────────────────────
-class TopicDetailScreen extends StatelessWidget {
+class TopicDetailScreen extends ConsumerWidget {
   final Topic topic;
 
   const TopicDetailScreen({super.key, required this.topic});
 
+  void _showEditDialog(BuildContext context, WidgetRef ref, Topic currentTopic) {
+    final titleCtrl = TextEditingController(text: currentTopic.title);
+    final contentCtrl = TextEditingController(text: currentTopic.content);
+    final homeworkCtrl = TextEditingController(text: currentTopic.homework);
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const Gap(16),
+                    Text(
+                      'Temany Üýtget ✏️',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const Gap(16),
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Tema ady',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                    const Gap(12),
+                    TextField(
+                      controller: contentCtrl,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: 'Ders barada maglumat / konspekt',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                    const Gap(12),
+                    TextField(
+                      controller: homeworkCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Öý işi / Ýumuş (Hökmany däl)',
+                        prefixIcon: const Icon(Icons.assignment_outlined),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                    const Gap(20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: FilledButton.icon(
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_rounded),
+                        label: Text(isSubmitting ? 'Ýüklenýär…' : 'Üýtgetmeleri Sakla'),
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (titleCtrl.text.trim().isEmpty) return;
+                                setModalState(() => isSubmitting = true);
+                                try {
+                                  await ref.read(subjectsProvider.notifier).editTopic(
+                                        topicId: currentTopic.id,
+                                        title: titleCtrl.text.trim(),
+                                        content: contentCtrl.text.trim(),
+                                        homework: homeworkCtrl.text.trim(),
+                                      );
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    HapticUtils.medium();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('✅ Tema üstünlikli üýtgedildi!'),
+                                        backgroundColor: const Color(0xFF059669),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  setModalState(() => isSubmitting = false);
+                                }
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, Topic currentTopic) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Temany pozmak'),
+        content: Text(
+          '"${currentTopic.title}" temasyny pozmak isleýärsiňizmi? Bu amal yza gaýtaryp bolmaz.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Ýok'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              ref.read(subjectsProvider.notifier).deleteTopic(currentTopic.id);
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+              HapticUtils.medium();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🗑️ Tema pozuldy!'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text('Hawa, poz'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final authState = ref.watch(authProvider);
+    final canManage = authState.canManageTopics;
+    final state = ref.watch(subjectsProvider);
+
+    // Live updated topic from state
+    final liveTopic = state.topics.firstWhere(
+      (t) => t.id == topic.id,
+      orElse: () => topic,
+    );
 
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
         title: Text(
-          topic.subjectName.isNotEmpty ? topic.subjectName : 'Tema Jikme-jigi',
+          liveTopic.subjectName.isNotEmpty ? liveTopic.subjectName : 'Tema Jikme-jigi',
           style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         actions: [
+          if (canManage) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_rounded, color: Colors.blue),
+              tooltip: 'Temany üýtget',
+              onPressed: () {
+                HapticUtils.light();
+                _showEditDialog(context, ref, liveTopic);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+              tooltip: 'Temany poz',
+              onPressed: () {
+                HapticUtils.light();
+                _confirmDelete(context, ref, liveTopic);
+              },
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.copy_rounded),
             tooltip: 'Teksti göçürip al',
             onPressed: () {
               HapticUtils.light();
               final fullText = '''
-${topic.title} (${topic.subjectName})
-Sene: ${topic.date} | Goşan: ${topic.createdBy}
+${liveTopic.title} (${liveTopic.subjectName})
+Sene: ${liveTopic.date} | Goşan: ${liveTopic.createdBy}
 
-${topic.content}
+${liveTopic.content}
 
-${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
+${liveTopic.hasHomework ? 'Öý işi:\n${liveTopic.homework}' : ''}
 ''';
               Clipboard.setData(ClipboardData(text: fullText.trim()));
               ScaffoldMessenger.of(context).showSnackBar(
@@ -803,7 +1019,7 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    topic.subjectCode.isNotEmpty ? topic.subjectCode : 'DERS',
+                    liveTopic.subjectCode.isNotEmpty ? liveTopic.subjectCode : 'DERS',
                     style: tt.labelMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: cs.onPrimaryContainer,
@@ -811,10 +1027,10 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
                   ),
                 ),
                 const Gap(10),
-                if (topic.subjectName.isNotEmpty)
+                if (liveTopic.subjectName.isNotEmpty)
                   Expanded(
                     child: Text(
-                      topic.subjectName,
+                      liveTopic.subjectName,
                       style: tt.titleSmall?.copyWith(
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
@@ -828,7 +1044,7 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    topic.date,
+                    liveTopic.date,
                     style: tt.bodySmall?.copyWith(fontSize: 12),
                   ),
                 ),
@@ -838,7 +1054,7 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
 
             // Title
             SelectableText(
-              topic.title,
+              liveTopic.title,
               style: tt.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
                 height: 1.3,
@@ -852,7 +1068,7 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
                 Icon(Icons.edit_note_rounded, size: 18, color: cs.primary),
                 const Gap(6),
                 Text(
-                  'Goşan: ${topic.createdBy}',
+                  'Goşan: ${liveTopic.createdBy}',
                   style: tt.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
@@ -874,8 +1090,8 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
             ),
             const Gap(8),
             SelectableText(
-              topic.content.isNotEmpty
-                  ? topic.content
+              liveTopic.content.isNotEmpty
+                  ? liveTopic.content
                   : 'Bu tema üçin giňişleýin konspekt ýazylmandyr.',
               style: tt.bodyLarge?.copyWith(
                 height: 1.6,
@@ -885,7 +1101,7 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
             ),
 
             // Homework section (if present)
-            if (topic.hasHomework) ...[
+            if (liveTopic.hasHomework) ...[
               const Gap(28),
               Container(
                 width: double.infinity,
@@ -928,7 +1144,7 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
                     ),
                     const Gap(8),
                     SelectableText(
-                      topic.homework,
+                      liveTopic.homework,
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF78350F),
@@ -940,9 +1156,74 @@ ${topic.hasHomework ? 'Öý işi:\n${topic.homework}' : ''}
                 ),
               ),
             ],
+
+            // Prominent Management Action Card (Starşy & Döwletgulyýew)
+            if (canManage) ...[
+              const Gap(36),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withAlpha(120),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Temany Dolandyrmak',
+                      style: tt.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    const Gap(12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.edit_rounded, color: Colors.blue),
+                            label: const Text('Üýtget'),
+                            onPressed: () {
+                              HapticUtils.light();
+                              _showEditDialog(context, ref, liveTopic);
+                            },
+                          ),
+                        ),
+                        const Gap(12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.red.shade700,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: const Text('Poz'),
+                            onPressed: () {
+                              HapticUtils.light();
+                              _confirmDelete(context, ref, liveTopic);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+

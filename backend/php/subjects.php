@@ -1,166 +1,165 @@
 <?php
 // ─────────────────────────────────────────────
-//  subjects.php  —  Sapaklar + Temalar API
-//  GET  ?type=subjects          → tüm dersler
-//  GET  ?type=topics            → tüm temalar
-//  GET  ?type=topics&subject=ID → belirli ders teması
-//  POST ?type=subject           → yeni ders ekle
-//  POST ?type=topic             → yeni tema ekle
+//  subjects.php  —  Sapaklar + Temalar API (Resilient)
 // ─────────────────────────────────────────────
 require_once __DIR__ . '/config.php';
 
-$db     = getDB();
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Byethost bazen POST'ta GET query string'i kesebiliyor. Hem GET hem Body kontrol edelim:
-$bodyRaw = ($method === 'POST') ? (json_decode(file_get_contents('php://input'), true) ?? []) : [];
+$db      = getDB();
+$method  = $_SERVER['REQUEST_METHOD'];
+$bodyRaw = ($method === 'POST' || $method === 'PUT') ? (json_decode(file_get_contents('php://input'), true) ?? []) : [];
 $type    = $_GET['type'] ?? $bodyRaw['type'] ?? 'topics';
+
+$jsonSubjects = 'data_subjects.json';
+$jsonTopics   = 'data_topics.json';
+
+$defaultSubjects = [
+    ['id' => 1, 'code' => 'ENG', 'name' => 'Iňlis dili',   'teacher' => 'Berdinazarow Altymyrat'],
+    ['id' => 2, 'code' => 'JPN', 'name' => 'Ýapon dili',   'teacher' => 'Nuryyewa Amanbike'],
+    ['id' => 3, 'code' => 'TKM', 'name' => 'Türkmen dili', 'teacher' => 'Ýoldaşowa Zylyha'],
+    ['id' => 4, 'code' => 'INF', 'name' => 'Informatika',  'teacher' => 'Başymow Serdar'],
+    ['id' => 5, 'code' => 'MAT', 'name' => 'Matematika',   'teacher' => 'Bonjakowa Ogultuwak'],
+    ['id' => 6, 'code' => 'FIZ', 'name' => 'Fizika',       'teacher' => 'Amanmammedowa Maýsagül'],
+];
 
 // ══════════════════════════════════════════════
 //  GET
 // ══════════════════════════════════════════════
 if ($method === 'GET') {
-
     if ($type === 'subjects') {
-        // Otomatik bozuk harf onarımı (I?lis -> Iňlis)
-        $db->query("UPDATE subjects SET name = 'Iňlis dili' WHERE code = 'ENG' AND (name LIKE '%?%' OR name = 'I?lis dili')");
-
-        // Tüm dersleri getir
-        $res = $db->query('SELECT id, code, name, teacher FROM subjects ORDER BY id ASC');
-        $rows = [];
-        if ($res) {
-            while ($row = $res->fetch_assoc()) {
-                $rows[] = $row;
-            }
+        if ($db) {
+            try {
+                $res = $db->query('SELECT id, code, name, teacher FROM subjects ORDER BY id ASC');
+                $rows = [];
+                if ($res) {
+                    while ($row = $res->fetch_assoc()) $rows[] = $row;
+                }
+                if (!empty($rows)) jsonOk($rows);
+            } catch (\Throwable $e) {}
         }
-        $db->close();
-        jsonOk($rows);
+        $subs = loadJsonFile($jsonSubjects, $defaultSubjects);
+        jsonOk($subs);
     }
 
-    // Temalar (LEFT JOIN ile ders adı/kodu)
+    // Temalar
     $subjectId = isset($_GET['subject']) ? (int)$_GET['subject'] : 0;
+    if ($db) {
+        try {
+            if ($subjectId > 0) {
+                $stmt = $db->prepare(
+                    "SELECT t.id, t.subject_id,
+                            COALESCE(s.code, 'DERS') AS subject_code,
+                            COALESCE(s.name, 'Umumy Ders') AS subject_name,
+                            t.title, t.content, t.homework, t.created_by,
+                            DATE_FORMAT(t.created_at, '%d.%m.%Y') AS date
+                     FROM topics t
+                     LEFT JOIN subjects s ON s.id = t.subject_id
+                     WHERE t.subject_id = ?
+                     ORDER BY t.id DESC"
+                );
+                $stmt->bind_param('i', $subjectId);
+            } else {
+                $stmt = $db->prepare(
+                    "SELECT t.id, t.subject_id,
+                            COALESCE(s.code, 'DERS') AS subject_code,
+                            COALESCE(s.name, 'Umumy Ders') AS subject_name,
+                            t.title, t.content, t.homework, t.created_by,
+                            DATE_FORMAT(t.created_at, '%d.%m.%Y') AS date
+                     FROM topics t
+                     LEFT JOIN subjects s ON s.id = t.subject_id
+                     ORDER BY t.id DESC"
+                );
+            }
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $rows = [];
+            while ($row = $res->fetch_assoc()) $rows[] = $row;
+            $stmt->close();
+            jsonOk($rows);
+        } catch (\Throwable $e) {}
+    }
 
+    // JSON file fallback
+    $topics = loadJsonFile($jsonTopics, []);
     if ($subjectId > 0) {
-        $stmt = $db->prepare(
-            "SELECT t.id, t.subject_id,
-                    COALESCE(s.code, 'DERS') AS subject_code,
-                    COALESCE(s.name, 'Umumy Ders') AS subject_name,
-                    t.title, t.content, t.homework, t.created_by,
-                    DATE_FORMAT(t.created_at, '%d.%m.%Y') AS date
-             FROM topics t
-             LEFT JOIN subjects s ON s.id = t.subject_id
-             WHERE t.subject_id = ?
-             ORDER BY t.created_at DESC"
-        );
-        $stmt->bind_param('i', $subjectId);
-    } else {
-        $stmt = $db->prepare(
-            "SELECT t.id, t.subject_id,
-                    COALESCE(s.code, 'DERS') AS subject_code,
-                    COALESCE(s.name, 'Umumy Ders') AS subject_name,
-                    t.title, t.content, t.homework, t.created_by,
-                    DATE_FORMAT(t.created_at, '%d.%m.%Y') AS date
-             FROM topics t
-             LEFT JOIN subjects s ON s.id = t.subject_id
-             ORDER BY t.created_at DESC
-             LIMIT 100"
-        );
+        $topics = array_values(array_filter($topics, fn($t) => (int)($t['subject_id'] ?? 0) === $subjectId));
     }
-
-    $stmt->execute();
-    $res  = $stmt->get_result();
-    $rows = [];
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $rows[] = $row;
-        }
-    }
-    $stmt->close();
-    $db->close();
-    jsonOk($rows);
+    jsonOk($topics);
 }
 
 // ══════════════════════════════════════════════
-//  POST
+//  POST — Täze tema goş
 // ══════════════════════════════════════════════
 if ($method === 'POST') {
-    $body = $bodyRaw;
+    $body       = getBody();
+    $subjectId  = (int)($body['subject_id'] ?? 0);
+    $title      = trim($body['title']       ?? '');
+    $content    = trim($body['content']     ?? '');
+    $homework   = trim($body['homework']    ?? '');
+    $createdBy  = trim($body['created_by']  ?? 'Starşy');
 
-    // ── Yeni ders ekle ────────────────────────
-    if ($type === 'subject') {
-        $code    = trim($body['code']    ?? '');
-        $name    = trim($body['name']    ?? '');
-        $teacher = trim($body['teacher'] ?? '');
-
-        if ($code === '' || $name === '') jsonError('Kod we ady hökman!');
-
-        $stmt = $db->prepare('INSERT INTO subjects (code, name, teacher) VALUES (?, ?, ?)');
-        $stmt->bind_param('sss', $code, $name, $teacher);
-        if ($stmt->execute()) {
-            $id = $db->insert_id;
-            $stmt->close();
-            $db->close();
-            jsonOk(['id' => $id, 'message' => 'Ders goşuldy']);
-        }
-        jsonError('DB hatasy: ' . $db->error, 500);
+    if ($title === '') {
+        jsonError('Tema ady hökman!');
     }
 
-    // ── Yeni tema ekle ────────────────────────
-    if ($type === 'topic') {
-        $subjectId  = (int)($body['subject_id'] ?? 0);
-        $title      = trim($body['title']       ?? '');
-        $content    = trim($body['content']     ?? '');
-        $homework   = trim($body['homework']    ?? '');
-        $createdBy  = trim($body['created_by']  ?? 'Starşy');
-
-        if ($title === '') {
-            jsonError('Tema ady hökman!');
-        }
-
-        // 1. Eger subject_id 0 bolsa ýa-da subjects tablisasynda tapylmasa,
-        // foreign key constraint fail bolmazlygy üçin barlanýar:
-        $validSubject = false;
-        if ($subjectId > 0) {
-            $check = $db->prepare('SELECT id FROM subjects WHERE id = ? LIMIT 1');
-            $check->bind_param('i', $subjectId);
-            $check->execute();
-            $checkRes = $check->get_result();
-            if ($checkRes && $checkRes->num_rows > 0) {
-                $validSubject = true;
+    if ($db) {
+        try {
+            $validSubject = false;
+            if ($subjectId > 0) {
+                $check = $db->prepare('SELECT id FROM subjects WHERE id = ? LIMIT 1');
+                $check->bind_param('i', $subjectId);
+                $check->execute();
+                $checkRes = $check->get_result();
+                if ($checkRes && $checkRes->num_rows > 0) $validSubject = true;
+                $check->close();
             }
-            $check->close();
-        }
-
-        // Eger berlen subject_id ýok bolsa, bar bolan ilkinji dersi al
-        if (!$validSubject) {
-            $firstSub = $db->query('SELECT id FROM subjects ORDER BY id ASC LIMIT 1');
-            if ($firstSub && $row = $firstSub->fetch_assoc()) {
-                $subjectId = (int)$row['id'];
-                $validSubject = true;
-            } else {
-                // Hiç ders ýok bolsa, default bir ders döret
-                $db->query("INSERT INTO subjects (code, name, teacher) VALUES ('TKM', 'Türkmen dili', '')");
-                $subjectId = $db->insert_id;
-                $validSubject = true;
+            if (!$validSubject) {
+                $firstSub = $db->query('SELECT id FROM subjects ORDER BY id ASC LIMIT 1');
+                if ($firstSub && $row = $firstSub->fetch_assoc()) {
+                    $subjectId = (int)$row['id'];
+                }
             }
-        }
 
-        $stmt = $db->prepare(
-            'INSERT INTO topics (subject_id, title, content, homework, created_by)
-             VALUES (?, ?, ?, ?, ?)'
-        );
-        $stmt->bind_param('issss', $subjectId, $title, $content, $homework, $createdBy);
-        if ($stmt->execute()) {
-            $id = $db->insert_id;
-            $stmt->close();
-            $db->close();
-            jsonOk(['id' => $id, 'subject_id' => $subjectId, 'message' => 'Täze tema goşuldy!']);
-        } else {
-            jsonError('DB ýazma hatasy: ' . $db->error, 500);
+            $stmt = $db->prepare(
+                'INSERT INTO topics (subject_id, title, content, homework, created_by)
+                 VALUES (?, ?, ?, ?, ?)'
+            );
+            $stmt->bind_param('issss', $subjectId, $title, $content, $homework, $createdBy);
+            if ($stmt->execute()) {
+                $id = $db->insert_id;
+                $stmt->close();
+                jsonOk(['id' => $id, 'subject_id' => $subjectId, 'message' => 'Täze tema goşuldy!']);
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    // JSON file fallback
+    $topics = loadJsonFile($jsonTopics, []);
+    $newId = count($topics) > 0 ? (max(array_map(fn($t) => (int)($t['id'] ?? 0), $topics)) + 1) : 1;
+    $subs = loadJsonFile($jsonSubjects, $defaultSubjects);
+    $subName = 'Ders';
+    $subCode = 'DERS';
+    foreach ($subs as $s) {
+        if ((int)$s['id'] === $subjectId) {
+            $subName = $s['name'];
+            $subCode = $s['code'];
+            break;
         }
     }
 
-    jsonError('Näbelli type: ' . htmlspecialchars($type));
+    $newTopic = [
+        'id' => $newId,
+        'subject_id' => $subjectId,
+        'subject_code' => $subCode,
+        'subject_name' => $subName,
+        'title' => $title,
+        'content' => $content,
+        'homework' => $homework,
+        'created_by' => $createdBy,
+        'date' => date('d.m.Y'),
+    ];
+    array_unshift($topics, $newTopic);
+    saveJsonFile($jsonTopics, $topics);
+    jsonOk(['id' => $newId, 'subject_id' => $subjectId, 'message' => 'Täze tema goşuldy!']);
 }
 
 // ══════════════════════════════════════════════
@@ -172,28 +171,27 @@ if ($method === 'DELETE') {
         jsonError('Geçerli ID gerekli!', 400);
     }
 
-    $stmt = $db->prepare('DELETE FROM topics WHERE id = ?');
-    $stmt->bind_param('i', $id);
-
-    if ($stmt->execute()) {
-        $affected = $stmt->affected_rows;
-        $stmt->close();
-        $db->close();
-        if ($affected > 0) {
-            jsonOk(['message' => 'Tema pozuldy!']);
-        } else {
-            jsonError('Tema tapylmady!', 404);
-        }
-    } else {
-        jsonError('DB ýazma hatasy: ' . $db->error, 500);
+    if ($db) {
+        try {
+            $stmt = $db->prepare('DELETE FROM topics WHERE id = ?');
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $stmt->close();
+        } catch (\Throwable $e) {}
     }
+
+    // JSON file sync
+    $topics = loadJsonFile($jsonTopics, []);
+    $topics = array_values(array_filter($topics, fn($t) => (int)($t['id'] ?? 0) !== $id));
+    saveJsonFile($jsonTopics, $topics);
+    jsonOk(['message' => 'Tema pozuldy!']);
 }
 
 // ══════════════════════════════════════════════
 //  PUT — Temany üýtget
 // ══════════════════════════════════════════════
 if ($method === 'PUT') {
-    $body     = json_decode(file_get_contents('php://input'), true) ?? [];
+    $body     = getBody();
     $id       = (int)($body['id'] ?? 0);
     $title    = trim($body['title']    ?? '');
     $content  = trim($body['content']  ?? '');
@@ -203,17 +201,27 @@ if ($method === 'PUT') {
         jsonError('ID we temany doldurmaly!', 400);
     }
 
-    $stmt = $db->prepare('UPDATE topics SET title = ?, content = ?, homework = ? WHERE id = ?');
-    $stmt->bind_param('sssi', $title, $content, $homework, $id);
-
-    if ($stmt->execute()) {
-        $stmt->close();
-        $db->close();
-        jsonOk(['message' => 'Tema üýtgedildi!']);
-    } else {
-        jsonError('DB ýazma hatasy: ' . $db->error, 500);
+    if ($db) {
+        try {
+            $stmt = $db->prepare('UPDATE topics SET title = ?, content = ?, homework = ? WHERE id = ?');
+            $stmt->bind_param('sssi', $title, $content, $homework, $id);
+            $stmt->execute();
+            $stmt->close();
+        } catch (\Throwable $e) {}
     }
+
+    // JSON file sync
+    $topics = loadJsonFile($jsonTopics, []);
+    foreach ($topics as &$t) {
+        if ((int)($t['id'] ?? 0) === $id) {
+            $t['title']    = $title;
+            $t['content']  = $content;
+            $t['homework'] = $homework;
+            break;
+        }
+    }
+    saveJsonFile($jsonTopics, $topics);
+    jsonOk(['message' => 'Tema üýtgedildi!']);
 }
 
 jsonError('Rugsat berilmedik usul', 405);
-

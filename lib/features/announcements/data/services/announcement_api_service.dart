@@ -35,7 +35,7 @@ class AnnouncementApiService {
               .toList();
         }
       }
-      debugPrint('[AnnouncementApiService] Failed: ${response.statusCode}');
+      debugPrint('[AnnouncementApiService] Failed: ${response.statusCode} - ${response.body}');
       return [];
     } catch (e) {
       debugPrint('[AnnouncementApiService] fetchAnnouncements error: $e');
