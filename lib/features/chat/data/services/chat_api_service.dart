@@ -12,8 +12,8 @@ class ChatApiService {
 
   static final Uri _chatUri = Uri.parse(AppConstants.chatUrl);
 
-  // ── İlk yükleme: son 60 mesajı getir ─────────────────────────────────────
-  Future<List<ChatMessage>> fetchMessages({int limit = 60}) async {
+  // ── Ilkinji ýükleme: soňky 25 haty getir ───────────────────────────────────
+  Future<List<ChatMessage>> fetchMessages({int limit = 25}) async {
     try {
       final uri = _chatUri.replace(
         queryParameters: {'limit': '$limit'},
@@ -33,6 +33,37 @@ class ChatApiService {
       return [];
     } catch (e) {
       debugPrint('[ChatApiService] fetchMessages error: $e');
+      return [];
+    }
+  }
+
+  // ── Öňki ýazyşmalar: beforeId-den öňki hatlary getir ───────────────────────
+  Future<List<ChatMessage>> fetchOlderMessages({
+    required int beforeId,
+    int limit = 25,
+  }) async {
+    try {
+      final uri = _chatUri.replace(
+        queryParameters: {
+          'before': '$beforeId',
+          'limit': '$limit',
+        },
+      );
+      final response = await _client
+          .get(uri, headers: {'Accept': 'application/json'})
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        if (decoded is Map && decoded['data'] is List) {
+          return (decoded['data'] as List)
+              .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ChatApiService] fetchOlderMessages error: $e');
       return [];
     }
   }

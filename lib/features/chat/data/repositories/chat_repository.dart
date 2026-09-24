@@ -15,11 +15,12 @@ final chatApiServiceProvider = Provider<ChatApiService>((ref) {
 
 class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   final ChatApiService _apiService;
+  final Ref? _ref;
   Timer? _pollTimer;
   int _lastSeenId = 0;
   static const String _prefKeyChatCache = 'topar115_cached_chat_messages_v1';
 
-  ChatNotifier(this._apiService) : super(const []) {
+  ChatNotifier(this._apiService, [this._ref]) : super(const []) {
     _initChat();
   }
 
@@ -88,19 +89,57 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  /// Serwerden ähli soňky hatlary çekmek
+  /// Serwerden hatlary çekmek
   Future<void> loadMessages() async {
     try {
-      final messages = await _apiService.fetchMessages(limit: 60);
+      // Eger öňden görülen hatlar bar bolsa, diňe şondan soňky täze hatlary çek
+      if (_lastSeenId > 0) {
+        await _pollNewMessages();
+        return;
+      }
+
+      // Täze giren ýagdaýynda: diňe soňky 25 haty ýükle
+      final messages = await _apiService.fetchMessages(limit: 25);
       if (messages.isNotEmpty) {
-        // Pending hatlary sakla, server'dan gelen confirmed hatlara ekle
         final pendingMsgs = state.where((m) => m.isPending).toList();
         state = [...messages, ...pendingMsgs];
         _updateLastSeenId(messages);
         await _saveCachedMessages(messages);
+        if (messages.length >= 25 && _ref != null) {
+          _ref.read(hasOlderMessagesProvider.notifier).state = true;
+        }
       }
     } catch (e) {
       debugPrint('[ChatNotifier] loadMessages error: $e');
+    }
+  }
+
+  /// Öňki ýazyşmalary ýüklemek (ilkinji/iň köne görkezilen hatdan öňki 25 hat)
+  Future<void> loadOlderMessages() async {
+    try {
+      final oldestMsg = state
+          .where((m) => !m.isPending && int.tryParse(m.id) != null)
+          .firstOrNull;
+      if (oldestMsg == null) {
+        if (_ref != null) _ref.read(hasOlderMessagesProvider.notifier).state = false;
+        return;
+      }
+
+      final beforeId = int.parse(oldestMsg.id);
+      final older = await _apiService.fetchOlderMessages(beforeId: beforeId, limit: 25);
+      if (older.isNotEmpty) {
+        final existingIds = state.map((m) => m.id).toSet();
+        final filtered = older.where((m) => !existingIds.contains(m.id)).toList();
+        if (filtered.isNotEmpty) {
+          state = [...filtered, ...state];
+          await _saveCachedMessages(state);
+        }
+      }
+      if (older.length < 25 && _ref != null) {
+        _ref.read(hasOlderMessagesProvider.notifier).state = false;
+      }
+    } catch (e) {
+      debugPrint('[ChatNotifier] loadOlderMessages error: $e');
     }
   }
 
@@ -281,9 +320,11 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 }
 
+final hasOlderMessagesProvider = StateProvider<bool>((ref) => false);
+
 final chatProvider =
     StateNotifierProvider<ChatNotifier, List<ChatMessage>>((ref) {
   final apiService = ref.watch(chatApiServiceProvider);
-  return ChatNotifier(apiService);
+  return ChatNotifier(apiService, ref);
 });
 

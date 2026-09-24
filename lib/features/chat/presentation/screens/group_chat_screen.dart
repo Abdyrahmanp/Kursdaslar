@@ -19,6 +19,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   final _scrollCtrl = ScrollController();
   bool _canSend = false;
   bool _isSending = false;
+  bool _isLoadingOlder = false;
   int _lastMessageCount = 0;
   ChatMessage? _replyingTo;
 
@@ -272,9 +273,62 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     );
   }
 
+  bool _isDifferentDay(DateTime d1, DateTime d2) {
+    final l1 = d1.toLocal();
+    final l2 = d2.toLocal();
+    return l1.year != l2.year || l1.month != l2.month || l1.day != l2.day;
+  }
+
+  String _formatDateBadge(DateTime dt) {
+    final now = DateTime.now();
+    final local = dt.toLocal();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate = DateTime(local.year, local.month, local.day);
+    final diffDays = today.difference(messageDate).inDays;
+
+    if (diffDays == 0) {
+      return 'Şu gün';
+    } else if (diffDays == 1) {
+      return 'Düýn';
+    } else {
+      const months = [
+        '', 'ýanwar', 'fewral', 'mart', 'aprel', 'maý', 'iýun',
+        'iýul', 'awgust', 'sentýabr', 'oktýabr', 'noýabr', 'dekabr'
+      ];
+      if (local.year == now.year) {
+        return '${local.day}-nji ${months[local.month]}';
+      }
+      return '${local.day}.${local.month.toString().padLeft(2, '0')}.${local.year}';
+    }
+  }
+
+  Widget _buildDateBadge(BuildContext context, String text) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withAlpha(180),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant.withAlpha(50)),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: cs.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(chatProvider);
+    final hasOlder = ref.watch(hasOlderMessagesProvider);
     final authState = ref.watch(authProvider);
     final currentStudent = authState.currentStudent;
     final currentPhone = currentStudent?.phone ?? '';
@@ -377,9 +431,46 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   : ListView.builder(
                       controller: _scrollCtrl,
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      itemCount: messages.length,
+                      itemCount: messages.length + (hasOlder ? 1 : 0),
                       itemBuilder: (context, index) {
-                        final msg = messages[index];
+                        if (hasOlder && index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Center(
+                              child: _isLoadingOlder
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: cs.surfaceContainerHighest.withAlpha(120),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.history_rounded, size: 18),
+                                      label: const Text(
+                                        'Öňki ýazyşmalary ýükle',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                      onPressed: () async {
+                                        setState(() => _isLoadingOlder = true);
+                                        try {
+                                          await ref.read(chatProvider.notifier).loadOlderMessages();
+                                        } finally {
+                                          if (mounted) setState(() => _isLoadingOlder = false);
+                                        }
+                                      },
+                                    ),
+                            ),
+                          );
+                        }
+
+                        final msgIndex = hasOlder ? index - 1 : index;
+                        final msg = messages[msgIndex];
                         final isMe = (currentStudent != null &&
                                 msg.senderName.trim().toLowerCase() ==
                                     currentStudent.name.trim().toLowerCase()) ||
@@ -387,8 +478,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                 msg.senderPhone.isNotEmpty &&
                                 msg.senderPhone == currentPhone);
 
+                        final showDateBadge = msgIndex == 0 ||
+                            _isDifferentDay(messages[msgIndex - 1].timestamp, msg.timestamp);
+
                         // Sağa süýşürip jogap bermek (Bounded Swipe to Reply)
-                        return _SwipeToReply(
+                        final bubble = _SwipeToReply(
                           onReply: () => _setReply(msg),
                           child: _ChatMessageBubble(
                             message: msg,
@@ -401,6 +495,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                 : null,
                           ),
                         );
+
+                        if (showDateBadge) {
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildDateBadge(context, _formatDateBadge(msg.timestamp)),
+                              bubble,
+                            ],
+                          );
+                        }
+
+                        return bubble;
                       },
                     ),
             ),

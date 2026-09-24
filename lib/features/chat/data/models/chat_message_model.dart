@@ -61,8 +61,9 @@ class ChatMessage {
   bool get hasReply => replyTo != null && replyTo!.messageId.isNotEmpty;
 
   String get formattedTime {
-    final hour = timestamp.hour.toString().padLeft(2, '0');
-    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final local = timestamp.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
 

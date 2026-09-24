@@ -10,13 +10,15 @@ $jsonFile = 'data_messages.json';
 
 // ── GET: son mesajları getir ──────────────────
 if ($method === 'GET') {
-    $afterId = isset($_GET['after']) ? (int)$_GET['after'] : 0;
-    $limit   = isset($_GET['limit']) ? (int)$_GET['limit'] : 60;
-    $limit   = max(1, min(200, $limit));
+    $afterId  = isset($_GET['after'])  ? (int)$_GET['after']  : 0;
+    $beforeId = isset($_GET['before']) ? (int)$_GET['before'] : 0;
+    $limit    = isset($_GET['limit'])  ? (int)$_GET['limit']  : 30;
+    $limit    = max(1, min(200, $limit));
 
     if ($db) {
         try {
             if ($afterId > 0) {
+                // Sadece täze hatlar
                 $stmt = $db->prepare(
                     'SELECT id, sender_name, sender_role, message, created_at,
                             reply_to_id, reply_to_name, reply_to_text
@@ -26,7 +28,19 @@ if ($method === 'GET') {
                      LIMIT ?'
                 );
                 $stmt->bind_param('ii', $afterId, $limit);
+            } else if ($beforeId > 0) {
+                // Öňki hatlar (beforeId-den öňki)
+                $stmt = $db->prepare(
+                    'SELECT id, sender_name, sender_role, message, created_at,
+                            reply_to_id, reply_to_name, reply_to_text
+                     FROM chat_messages
+                     WHERE id < ?
+                     ORDER BY id DESC
+                     LIMIT ?'
+                );
+                $stmt->bind_param('ii', $beforeId, $limit);
             } else {
+                // Iň soňky N hat
                 $stmt = $db->prepare(
                     'SELECT id, sender_name, sender_role, message, created_at,
                             reply_to_id, reply_to_name, reply_to_text
@@ -50,8 +64,12 @@ if ($method === 'GET') {
     // JSON file fallback
     $all = loadJsonFile($jsonFile, []);
     if ($afterId > 0) {
-        $filtered = array_filter($all, fn($m) => (int)($m['id'] ?? 0) > $afterId);
-        jsonOk(array_values(array_slice($filtered, 0, $limit)));
+        $filtered = array_values(array_filter($all, fn($m) => (int)($m['id'] ?? 0) > $afterId));
+        jsonOk(array_slice($filtered, 0, $limit));
+    } else if ($beforeId > 0) {
+        $filtered = array_values(array_filter($all, fn($m) => (int)($m['id'] ?? 0) < $beforeId));
+        $slice = array_slice($filtered, -$limit);
+        jsonOk($slice);
     } else {
         $slice = array_slice($all, -$limit);
         jsonOk(array_values($slice));

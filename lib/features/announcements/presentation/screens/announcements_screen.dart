@@ -39,6 +39,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   bool _dialogOpen = false;
   DispatchMode _dispatchMode = DispatchMode.online;
+  bool _userManuallySelectedMode = false;
   bool _isUrgent = false;
   bool _isPostingOnline = false;
 
@@ -47,6 +48,18 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     super.initState();
     _msgCtrl.addListener(() {
       ref.read(smsDispatcherProvider.notifier).updateMessage(_msgCtrl.text);
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final syncStatus = ref.read(announcementSyncStatusProvider);
+      if (!_userManuallySelectedMode) {
+        setState(() {
+          _dispatchMode = (syncStatus == SyncStatus.offline)
+              ? DispatchMode.sms
+              : DispatchMode.online;
+        });
+      }
     });
   }
 
@@ -210,6 +223,17 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
             ),
           );
           ref.read(smsDispatcherProvider.notifier).resetToIdle();
+        }
+      }
+    });
+
+    // Awtomatiki Internet ýa-da SMS saýlamak (eger ulanyjy özi üýtgetmedik bolsa)
+    ref.listen<SyncStatus>(announcementSyncStatusProvider, (previous, next) {
+      if (!_userManuallySelectedMode && mounted) {
+        if (next == SyncStatus.offline) {
+          setState(() => _dispatchMode = DispatchMode.sms);
+        } else if (next == SyncStatus.online) {
+          setState(() => _dispatchMode = DispatchMode.online);
         }
       }
     });
@@ -460,7 +484,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                     _buildModeChip(
                       mode: DispatchMode.dual,
                       icon: Icons.bolt_rounded,
-                      label: 'Dual-Mode',
+                      label: 'Hem internet, hem SMS',
                     ),
                   ],
                 ),
@@ -553,6 +577,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       child: GestureDetector(
         onTap: () {
           HapticUtils.light();
+          _userManuallySelectedMode = true;
           setState(() => _dispatchMode = mode);
         },
         child: AnimatedContainer(
@@ -579,13 +604,17 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                 size: 16,
                 color: isSelected ? Colors.white : cs.onSurfaceVariant,
               ),
-              const Gap(6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : cs.onSurfaceVariant,
+              const Gap(5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? Colors.white : cs.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -730,7 +759,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         can = state.canDispatch && !_isPostingOnline;
         icon = Icons.bolt_rounded;
         label = can
-            ? '⚡ Dual (Internet + ${state.selectedIds.length} SMS)'
+            ? '⚡ Hem internet, hem SMS (${state.selectedIds.length} talyp)'
             : 'Talyplary saýlaň we hat ýazyň';
         break;
     }

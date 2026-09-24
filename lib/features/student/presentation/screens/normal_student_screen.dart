@@ -12,6 +12,7 @@ import 'package:topar_115/features/auth/presentation/controllers/auth_controller
 import 'package:topar_115/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:topar_115/features/subjects/presentation/screens/subjects_screen.dart';
 import 'package:topar_115/features/timetable/presentation/screens/timetable_screen.dart';
+import 'package:topar_115/features/settings/presentation/screens/settings_screen.dart';
 
 final normalTabProvider = StateProvider<int>((ref) => 0);
 
@@ -40,7 +41,7 @@ class NormalStudentScreen extends ConsumerWidget {
           GroupChatScreen(),
           TimetableScreen(),
           SubjectsScreen(),
-          _ProfileSettingsView(),
+          SettingsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -184,7 +185,7 @@ class _AnnouncementsView extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Salam, ${currentStudent?.shortName ?? 'Talyp'}! 👋',
+                            'Salam, ${currentStudent?.name ?? 'Talyp'}! 👋',
                             style: tt.titleMedium?.copyWith(
                               fontWeight: FontWeight.w800,
                               color: cs.onPrimaryContainer,
@@ -206,13 +207,14 @@ class _AnnouncementsView extends ConsumerWidget {
             ),
           ),
 
-          // Server Connection Status Pill
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: _buildSyncStatusBanner(context, syncStatus),
+          // Server Connection Status Pill (diňe onlaýn bolanda)
+          if (syncStatus == SyncStatus.online || syncStatus == SyncStatus.syncing)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: _buildSyncStatusBanner(context, syncStatus),
+              ),
             ),
-          ),
 
           // Title Section
           SliverToBoxAdapter(
@@ -488,272 +490,6 @@ class _AnnouncementCard extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── 2. Settings & Profile View for Normal Students ───────────────────────────
-
-class _ProfileSettingsView extends ConsumerWidget {
-  const _ProfileSettingsView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final currentTheme = ref.watch(themeModeProvider);
-    final student = authState.currentStudent;
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverAppBar(
-          expandedHeight: 120,
-          pinned: true,
-          backgroundColor: const Color(0xFF059669),
-          flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
-            title: Text(
-              'Sazlamalar ⚙️',
-              style: tt.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            background: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF059669), Color(0xFF0D9488)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-          ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.all(16),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              // Student Profile Info Card
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: cs.outlineVariant.withAlpha(80)),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: student?.avatarBg ?? cs.primary,
-                      child: Text(
-                        student?.initials ?? 'T',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Gap(16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            student?.name ?? 'Talyp',
-                            style: tt.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const Gap(2),
-                          Text(
-                            student?.phone ?? '',
-                            style: tt.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                          const Gap(6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Normal Talyp • ${AppConstants.className}',
-                              style: tt.labelSmall?.copyWith(
-                                color: cs.onPrimaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Gap(20),
-
-              // Classmates list entry button
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                tileColor: cs.surfaceContainerLow,
-                leading: Icon(Icons.groups_rounded, color: cs.primary),
-                title: const Text(
-                  'Toparadaşlaryň sanawy 👥',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text('25 kişilik talyplar sanawyny synlamak'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () {
-                  HapticUtils.light();
-                  _showRosterSheet(context);
-                },
-              ),
-              const Gap(24),
-
-              // Theme Options
-              Text(
-                'Tema / Display Mode',
-                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const Gap(12),
-              Container(
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.light_mode_rounded),
-                      title: const Text('Light ☀️'),
-                      trailing: currentTheme == ThemeMode.light
-                          ? Icon(Icons.check_circle_rounded, color: cs.primary)
-                          : null,
-                      onTap: () {
-                        HapticUtils.light();
-                        ref.read(themeModeProvider.notifier).state =
-                            ThemeMode.light;
-                      },
-                    ),
-                    Divider(height: 1, color: cs.outlineVariant.withAlpha(60)),
-                    ListTile(
-                      leading: const Icon(Icons.dark_mode_rounded),
-                      title: const Text('Dark 🌙'),
-                      trailing: currentTheme == ThemeMode.dark
-                          ? Icon(Icons.check_circle_rounded, color: cs.primary)
-                          : null,
-                      onTap: () {
-                        HapticUtils.light();
-                        ref.read(themeModeProvider.notifier).state =
-                            ThemeMode.dark;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const Gap(32),
-
-              // Logout Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    HapticUtils.light();
-                    ref.read(authProvider.notifier).logout();
-                  },
-                  icon: const Icon(Icons.logout_rounded, color: Colors.red),
-                  label: const Text(
-                    'Çykyş etmek',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.red.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showRosterSheet(BuildContext context) {
-    final students = StudentRepository.classStudents;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.8,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (ctx, scrollController) => Column(
-          children: [
-            const Gap(12),
-            Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const Gap(16),
-            Text(
-              'Toparadaşlaryň sanawy 👥',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const Gap(4),
-            Text(
-              '${AppConstants.className} • Jemi ${students.length} talyp',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const Gap(12),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: students.length,
-                itemBuilder: (ctx, index) {
-                  final student = students[index];
-                  return RecipientListTile(
-                    student: student,
-                    isSelected: false,
-                    onTap: () {},
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
