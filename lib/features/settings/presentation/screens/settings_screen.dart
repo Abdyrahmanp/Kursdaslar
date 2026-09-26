@@ -6,23 +6,25 @@ import 'package:topar_115/app/app.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
 import 'package:topar_115/core/utils/haptic_utils.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:topar_115/l10n/app_localizations.dart';
 
 /// The unified settings screen for all users (both Starşy and Normal Students).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hasapdan çykmak'),
-        content: const Text(
-          'Hakykatdan hem hasabyňyzdan çykmak isleýärsiňizmi?',
+        title: Text(l.settingsLogoutTitle),
+        content: Text(
+          l.settingsLogoutBody,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Ýatyr'),
+            child: Text(l.settingsLogoutCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -31,7 +33,7 @@ class SettingsScreen extends ConsumerWidget {
               HapticUtils.medium();
               ref.read(authProvider.notifier).logout();
             },
-            child: const Text('Çykyş et'),
+            child: Text(l.settingsLogoutConfirm),
           ),
         ],
       ),
@@ -40,6 +42,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final currentLocale = ref.watch(localeProvider);
     final currentTheme = ref.watch(themeModeProvider);
     final authState = ref.watch(authProvider);
@@ -50,9 +53,11 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: cs.surface,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
+      body: ScrollConfiguration(
+        behavior: const ScrollBehavior().copyWith(overscroll: false),
+        child: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
+          slivers: [
           // ── Gradient Header ──────────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 120,
@@ -62,7 +67,7 @@ class SettingsScreen extends ConsumerWidget {
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
               title: Text(
-                'Sazlamalar ⚙️',
+                l.settingsTitle,
                 style: tt.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -175,8 +180,8 @@ class SettingsScreen extends ConsumerWidget {
                 // ── Section 1: Dil Saýlawy (Language) ───────────────────────
                 _SectionTitle(
                   icon: Icons.language_rounded,
-                  title: 'Dil / Language',
-                  subtitle: 'Programmanyň görkezilýän dili',
+                  title: l.settingsLanguageTitle,
+                  subtitle: l.settingsLanguageSubtitle,
                 ),
                 const Gap(12),
                 Container(
@@ -227,8 +232,8 @@ class SettingsScreen extends ConsumerWidget {
                 // ── Section 2: Görünüş / Tema (Theme) ───────────────────────
                 _SectionTitle(
                   icon: Icons.palette_outlined,
-                  title: 'Tema / Theme',
-                  subtitle: 'Görünüş rejesi (Açyk, Garaňky, Sistem)',
+                  title: l.settingsThemeTitle,
+                  subtitle: l.settingsThemeSubtitle,
                 ),
                 const Gap(12),
                 Container(
@@ -241,7 +246,7 @@ class SettingsScreen extends ConsumerWidget {
                     children: [
                       _ThemeTile(
                         icon: Icons.brightness_auto_rounded,
-                        title: 'Sistem ⚙️',
+                        title: l.settingsThemeSystem,
                         isSelected: currentTheme == ThemeMode.system,
                         onTap: () {
                           HapticUtils.light();
@@ -257,7 +262,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       _ThemeTile(
                         icon: Icons.light_mode_rounded,
-                        title: 'Açyk rejim ☀️',
+                        title: l.settingsThemeLight,
                         isSelected: currentTheme == ThemeMode.light,
                         onTap: () {
                           HapticUtils.light();
@@ -273,7 +278,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       _ThemeTile(
                         icon: Icons.dark_mode_rounded,
-                        title: 'Garaňky rejim 🌙',
+                        title: l.settingsThemeDark,
                         isSelected: currentTheme == ThemeMode.dark,
                         onTap: () {
                           HapticUtils.light();
@@ -289,8 +294,8 @@ class SettingsScreen extends ConsumerWidget {
                 // ── Section 3: Gizlinlik we Syýasat Accordion ─────────────────
                 _SectionTitle(
                   icon: Icons.shield_outlined,
-                  title: 'Howpsuzlyk & Düzgünler',
-                  subtitle: 'Gizlinlik syýasaty we ulanyş şertleri',
+                  title: l.settingsPrivacyTitle,
+                  subtitle: l.settingsPrivacySubtitle,
                 ),
                 const Gap(12),
                 Container(
@@ -317,15 +322,15 @@ class SettingsScreen extends ConsumerWidget {
                           size: 20,
                         ),
                       ),
-                      title: const Text(
-                        'Gizlinlik we Ulanyş Syýasaty',
+                      title: Text(
+                        l.settingsPrivacyExpand,
                         style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(
-                        'Maglumatlaryň goralmagy barada',
+                        l.settingsPrivacyExpandSub,
                         style: tt.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant.withAlpha(160),
                           fontSize: 11.5,
@@ -375,9 +380,9 @@ class SettingsScreen extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _showLogoutDialog(context, ref),
                     icon: const Icon(Icons.logout_rounded, color: Colors.red),
-                    label: const Text(
-                      'Hasapdan çykmak',
-                      style: TextStyle(
+                    label: Text(
+                      l.settingsLogout,
+                      style: const TextStyle(
                         color: Colors.red,
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
@@ -521,6 +526,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:topar_115/app/app.dart';
 import 'package:topar_115/core/utils/haptic_utils.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 import '../../data/models/topic_model.dart';
@@ -199,6 +200,8 @@ class SubjectsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocale = ref.watch(localeProvider);
+    final isEn = currentLocale.languageCode == 'en';
     final state = ref.watch(subjectsProvider);
     final authState = ref.watch(authProvider);
     final cs = Theme.of(context).colorScheme;
@@ -219,7 +222,7 @@ class SubjectsScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                tooltip: 'Temalary täzele',
+                tooltip: isEn ? 'Refresh topics' : 'Temalary täzele',
                 onPressed: () {
                   HapticUtils.light();
                   ref.read(subjectsProvider.notifier).loadData();
@@ -229,7 +232,7 @@ class SubjectsScreen extends ConsumerWidget {
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
               title: Text(
-                'Sapak Temalary 📚',
+                isEn ? 'Subject Topics 📚' : 'Sapak Temalary 📚',
                 style: tt.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -255,7 +258,7 @@ class SubjectsScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   ChoiceChip(
-                    label: const Text('Ähli Sapaklar'),
+                    label: Text(isEn ? 'All Subjects' : 'Ähli Sapaklar'),
                     selected: state.selectedSubjectId == null,
                     onSelected: (selected) {
                       HapticUtils.light();
@@ -297,7 +300,9 @@ class SubjectsScreen extends ConsumerWidget {
                               size: 64, color: cs.outlineVariant),
                           const Gap(16),
                           Text(
-                            'Bu sapak boýunça entek tema goşulmady.',
+                            isEn
+                                ? 'No topics added for this subject yet.'
+                                : 'Bu sapak boýunça entek tema goşulmady.',
                             textAlign: TextAlign.center,
                             style: tt.bodyLarge?.copyWith(
                               color: cs.onSurfaceVariant,
@@ -308,7 +313,7 @@ class SubjectsScreen extends ConsumerWidget {
                             FilledButton.tonalIcon(
                               onPressed: () => _showAddTopicDialog(context, ref),
                               icon: const Icon(Icons.add_rounded),
-                              label: const Text('Ilkinji temany goş'),
+                              label: Text(isEn ? 'Add first topic' : 'Ilkinji temany goş'),
                             ),
                           ],
                         ],
@@ -334,7 +339,7 @@ class SubjectsScreen extends ConsumerWidget {
                 _showAddTopicDialog(context, ref);
               },
               icon: const Icon(Icons.add_task_rounded),
-              label: const Text('Tema Goş'),
+              label: Text(isEn ? 'Add Topic' : 'Tema Goş'),
             )
           : null,
     );

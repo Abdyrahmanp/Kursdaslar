@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:topar_115/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
@@ -33,6 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submitLogin() async {
+    final l = AppLocalizations.of(context);
     HapticUtils.light();
     FocusScope.of(context).unfocus();
 
@@ -43,12 +45,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (firstName.isEmpty || lastName.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.white),
-              Gap(10),
+              const Icon(Icons.warning_amber_rounded, color: Colors.white),
+              const Gap(10),
               Expanded(
-                child: Text('Haýyş, adyňyzy, familiýaňyzy we telefon belgiňizi giriziň!'),
+                child: Text(l.loginEmptyFields),
               ),
             ],
           ),
@@ -71,6 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final authState = ref.watch(authProvider);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
@@ -80,7 +83,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+            physics: const ClampingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -158,14 +161,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hoş geldiňiz! 👋',
+                        l.loginWelcome,
                         style: tt.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const Gap(6),
                       Text(
-                        'Topara girmek üçin maglumatlaryňyzy giriziň:',
+                        l.loginWelcomeSub,
                         style: tt.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -176,8 +179,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       FifteenTextField(
                         controller: _firstNameCtrl,
                         focusNode: _firstNameFocus,
-                        label: 'Adyňyz',
-                        hintText: 'Adyňyzy giriziň',
+                        label: l.loginFirstName,
+                        hintText: l.loginFirstNameHint,
                         icon: Icons.person_outline_rounded,
                         onChanged: (_) => ref.read(authProvider.notifier).clearError(),
                       ),
@@ -187,8 +190,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       FifteenTextField(
                         controller: _lastNameCtrl,
                         focusNode: _lastNameFocus,
-                        label: 'Familiýaňyz',
-                        hintText: 'Familiýaňyzy giriziň',
+                        label: l.loginLastName,
+                        hintText: l.loginLastNameHint,
                         icon: Icons.badge_outlined,
                         onChanged: (_) => ref.read(authProvider.notifier).clearError(),
                       ),
@@ -198,7 +201,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       FifteenTextField(
                         controller: _phoneCtrl,
                         focusNode: _phoneFocus,
-                        label: 'Telefon belgisi',
+                        label: l.loginPhone,
                         hintText: '61 76 28 19',
                         prefixText: '+993 ',
                         keyboardType: TextInputType.phone,
@@ -263,7 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      'Ulgama gir',
+                                      l.loginButton,
                                       style: tt.titleMedium?.copyWith(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:topar_115/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
@@ -73,6 +74,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   // ── Dispatch Handler ──────────────────────────────────────────────────────
 
   Future<void> _handleDispatch() async {
+    final l = AppLocalizations.of(context);
     if (_isPostingOnline || _dialogOpen) return;
     final message = _msgCtrl.text.trim();
     if (message.isEmpty) return;
@@ -112,9 +114,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                     child: Text(
                       success
                           ? (isAll
-                              ? '🌐 Duýduryş ähli talyplar üçin ugradyldy!'
-                              : '🌐 Duýduryş saýlanan ${targetList.length} talyp üçin ugradyldy!')
-                          : '⚠️ Serwere ugradylmady, emma ýerli ýatda saklandy.',
+                              ? l.announceSentAll
+                              : l.announceSentSelected(targetList.length))
+                          : l.announceSentFailed,
                     ),
                   ),
                 ],
@@ -292,6 +294,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   // ── App Bar ───────────────────────────────────────────────────────────────
 
   SliverAppBar _buildAppBar(BuildContext context, bool collapsed) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -308,7 +311,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
           opacity: collapsed ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 200),
           child: Text(
-            'Kursdaşlar 🎓',
+            l.announcementsTitle,
             style: tt.titleMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -372,6 +375,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   // ── Compose Card ──────────────────────────────────────────────────────────
 
   Widget _buildComposeCard(BuildContext context, SmsDispatcherState state) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final over160 = state.charCount > AppConstants.smsMaxSinglePart;
@@ -402,7 +406,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                       size: 18, color: cs.primary),
                   const Gap(6),
                   Text(
-                    'Habar ýazmak',
+                    l.announceComposeLabel,
                     style: tt.labelLarge?.copyWith(
                       color: cs.primary,
                       fontWeight: FontWeight.w700,
@@ -421,7 +425,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                 style: tt.bodyMedium,
                 decoration: InputDecoration(
                   hintText:
-                      'Habaryňyzy şu ýere ýazyň…',
+                      l.announcePlaceholder,
                   hintStyle: tt.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant.withAlpha(140),
                   ),
@@ -484,17 +488,17 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                     _buildModeChip(
                       mode: DispatchMode.online,
                       icon: Icons.cloud_upload_rounded,
-                      label: 'Internet',
+                      label: l.announceModeInternet,
                     ),
                     _buildModeChip(
                       mode: DispatchMode.sms,
                       icon: Icons.sms_rounded,
-                      label: 'SMS GSM',
+                      label: l.announceModeSms,
                     ),
                     _buildModeChip(
                       mode: DispatchMode.dual,
                       icon: Icons.bolt_rounded,
-                      label: 'Ikisem',
+                      label: l.announceModeDual,
                     ),
                   ],
                 ),
@@ -528,7 +532,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                           ),
                           const Gap(6),
                           Text(
-                            'Gyssagly duýduryş',
+                            l.announceUrgent,
                             style: tt.labelMedium?.copyWith(
                               color: _isUrgent
                                   ? Colors.orange.shade700
@@ -550,14 +554,14 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                         color: const Color(0xFF059669).withAlpha(20),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.public_rounded,
+                          const Icon(Icons.public_rounded,
                               size: 12, color: Color(0xFF059669)),
-                          Gap(4),
+                          const Gap(4),
                           Text(
-                            'Onlaýn Bulut',
-                            style: TextStyle(
+                            l.announceOnlineCloud,
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF059669),
@@ -637,6 +641,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   // ── Search Card ───────────────────────────────────────────────────────────
 
   Widget _buildSearchCard(BuildContext context, SmsDispatcherState state) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -662,7 +667,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
           },
           style: tt.bodyMedium,
           decoration: InputDecoration(
-            hintText: 'Toparadaşlary ady ýa-da nomeri boýunça gözlemek…',
+            hintText: l.announceSearchHint,
             hintStyle: tt.bodyMedium?.copyWith(
               color: cs.onSurfaceVariant.withAlpha(140),
               fontSize: 14,
@@ -690,6 +695,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   // ── Student List ──────────────────────────────────────────────────────────
 
   Widget _buildStudentList(BuildContext context, SmsDispatcherState state) {
+    final l = AppLocalizations.of(context);
     final list = state.filteredStudents;
 
     if (list.isEmpty) {
@@ -706,12 +712,12 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
               ),
               const Gap(12),
               Text(
-                'Gözlege laýyk talyp tapylmady',
+                l.announceNoResults,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Gap(4),
               Text(
-                'Nomeri ýa-da ady täzeden barlap görüň.',
+                l.announceNoResultsHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
@@ -740,6 +746,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
 
   Widget _buildDispatchButton(
       BuildContext context, SmsDispatcherState state) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -753,9 +760,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         can = hasMsg && !_isPostingOnline;
         icon = _isPostingOnline ? Icons.hourglass_top_rounded : Icons.cloud_upload_rounded;
         label = _isPostingOnline
-            ? 'Serwere ýüklenýär…'
+            ? l.announceFabUploading
             : (state.selectedIds.isEmpty
-                ? '🌐 Ähli talyplar üçin Internetde paýlaş'
+                ? l.announceFabOnlineAll
                 : '🌐 ${state.selectedIds.length} talyp üçin serwere goý');
         break;
       case DispatchMode.sms:
@@ -763,14 +770,14 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         icon = Icons.sms_rounded;
         label = can
             ? '📱 ${state.selectedIds.length} talyba SMS ugrat'
-            : 'Talyplary saýlaň we hat ýazyň';
+            : l.announceFabIdle;
         break;
       case DispatchMode.dual:
         can = state.canDispatch && !_isPostingOnline;
         icon = Icons.bolt_rounded;
         label = can
             ? '⚡ Ikisem (${state.selectedIds.length} talyp)'
-            : 'Talyplary saýlaň we hat ýazyň';
+            : l.announceFabIdle;
         break;
     }
 
@@ -840,6 +847,7 @@ class _ServerStatusBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final status = ref.watch(announcementSyncStatusProvider);
 
     Color dotColor;
@@ -848,16 +856,16 @@ class _ServerStatusBadge extends ConsumerWidget {
     switch (status) {
       case SyncStatus.online:
         dotColor = const Color(0xFF10B981); // Bright Green
-        label = 'Onlaýn Baglanan';
+        label = l.chatStatusOnline;
         break;
       case SyncStatus.syncing:
         dotColor = const Color(0xFF3B82F6); // Blue
-        label = 'Täzelenýär…';
+        label = l.chatStatusSyncing;
         break;
       case SyncStatus.offline:
       case SyncStatus.idle:
         dotColor = const Color(0xFFFFA726); // Amber
-        label = 'GSM Offline';
+        label = l.chatStatusOffline;
         break;
     }
 
@@ -917,6 +925,7 @@ class _SelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -959,7 +968,7 @@ class _SelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
                     ),
                     const Gap(6),
                     Text(
-                      state.allSelected ? 'Unselect All' : 'Select All',
+                      state.allSelected ? l.announceUnselectAll : l.announceSelectAll,
                       style: tt.labelMedium?.copyWith(
                         color: state.allSelected
                             ? cs.primary

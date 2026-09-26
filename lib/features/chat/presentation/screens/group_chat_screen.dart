@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:topar_115/l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -139,6 +140,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -167,7 +169,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               // Jogap ber
               ListTile(
                 leading: const Icon(Icons.reply_rounded, color: Color(0xFF6366F1)),
-                title: const Text('Jogap ber'),
+                title: Text(l.chatMenuReply),
                 onTap: () {
                   Navigator.pop(ctx);
                   _setReply(msg);
@@ -176,13 +178,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               // Göçürip al
               ListTile(
                 leading: const Icon(Icons.copy_rounded, color: Colors.grey),
-                title: const Text('Teksti göçürip al'),
+                title: Text(l.chatMenuCopy),
                 onTap: () {
                   Navigator.pop(ctx);
                   Clipboard.setData(ClipboardData(text: msg.message));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Hat göçürildi! 📋'),
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context).chatCopied),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -191,7 +193,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               if (canModerate) ...[
                 ListTile(
                   leading: const Icon(Icons.edit_rounded, color: Colors.blue),
-                  title: const Text('Haty üýtget'),
+                  title: Text(l.chatMenuEdit),
                   onTap: () {
                     Navigator.pop(ctx);
                     _showEditDialog(context, msg);
@@ -199,9 +201,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete_rounded, color: Colors.red),
-                  title: const Text(
-                    'Haty poz',
-                    style: TextStyle(color: Colors.red),
+                  title: Text(
+                    l.chatMenuDelete,
+                    style: const TextStyle(color: Colors.red),
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -221,59 +223,65 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final ctrl = TextEditingController(text: msg.message);
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Haty üýtget'),
-        content: TextField(
-          controller: ctrl,
-          maxLines: null,
-          decoration: const InputDecoration(
-            hintText: 'Täze tekst…',
-            border: OutlineInputBorder(),
+      builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
+        return AlertDialog(
+          title: Text(l.chatEditTitle),
+          content: TextField(
+            controller: ctrl,
+            maxLines: null,
+            decoration: InputDecoration(
+              hintText: l.chatEditHint,
+              border: const OutlineInputBorder(),
+            ),
+            autofocus: true,
           ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Ýatyr'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final newText = ctrl.text.trim();
-              if (newText.isNotEmpty && newText != msg.message) {
-                ref.read(chatProvider.notifier).editMessage(msg.id, newText);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Sakla'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l.chatCancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final newText = ctrl.text.trim();
+                if (newText.isNotEmpty && newText != msg.message) {
+                  ref.read(chatProvider.notifier).editMessage(msg.id, newText);
+                }
+                Navigator.pop(ctx);
+              },
+              child: Text(l.chatSave),
+            ),
+          ],
+        );
+      },
     );
   }
 
   void _confirmDelete(BuildContext context, ChatMessage msg) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Haty pozmak'),
-        content: const Text('Bu haty pozmak isleýärsiňizmi? Bu amal yza gaýtaryp bolmaz.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Ýok'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              ref.read(chatProvider.notifier).deleteMessage(msg.id);
-              Navigator.pop(ctx);
-              HapticUtils.medium();
-            },
-            child: const Text('Hawa, poz'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
+        return AlertDialog(
+          title: Text(l.chatDeleteTitle),
+          content: Text(l.chatDeleteConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l.chatNo),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                ref.read(chatProvider.notifier).deleteMessage(msg.id);
+                Navigator.pop(ctx);
+                HapticUtils.medium();
+              },
+              child: Text(l.chatYesDelete),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -283,7 +291,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     return l1.year != l2.year || l1.month != l2.month || l1.day != l2.day;
   }
 
-  String _formatDateBadge(DateTime dt) {
+  String _formatDateBadge(BuildContext context, DateTime dt) {
+    final l = AppLocalizations.of(context);
     final now = DateTime.now();
     final local = dt.toLocal();
     final today = DateTime(now.year, now.month, now.day);
@@ -291,9 +300,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final diffDays = today.difference(messageDate).inDays;
 
     if (diffDays == 0) {
-      return 'Şu gün';
+      return l.chatDateToday;
     } else if (diffDays == 1) {
-      return 'Düýn';
+      return l.chatDateYesterday;
     } else {
       const months = [
         '', 'ýanwar', 'fewral', 'mart', 'aprel', 'maý', 'iýun',
@@ -336,6 +345,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final authState = ref.watch(authProvider);
     final currentStudent = authState.currentStudent;
     final currentPhone = currentStudent?.phone ?? '';
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final canModerate = _canModerate(authState);
@@ -362,14 +372,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Topar-115 Çat 💬',
+              l.chatTitle,
               style: tt.titleMedium?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
               ),
             ),
             Text(
-              '25 talyp • Umumy söhbetdeşlik',
+              l.chatSubtitle,
               style: tt.bodySmall?.copyWith(
                 color: Colors.white.withAlpha(200),
                 fontSize: 11,
@@ -380,7 +390,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            tooltip: 'Hatlary täzele',
+            tooltip: l.chatRefreshTooltip,
             onPressed: () {
               HapticUtils.light();
               ref.read(chatProvider.notifier).loadOlderMessages();
@@ -414,7 +424,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             ),
                             const Gap(16),
                             Text(
-                              'Söhbetdeşlikde entek hat ýok.',
+                              l.chatEmpty,
                               style: tt.titleSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: cs.onSurface,
@@ -422,7 +432,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             ),
                             const Gap(6),
                             Text(
-                              'Birinji bolup toparadaşlaryňyza salam ýazyň! 👋',
+                              l.chatEmptyHint,
                               textAlign: TextAlign.center,
                               style: tt.bodyMedium?.copyWith(
                                 color: cs.onSurfaceVariant,
@@ -445,9 +455,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                         ),
                                       ),
                                       icon: const Icon(Icons.history_rounded, size: 18),
-                                      label: const Text(
-                                        'Öňki ýazyşmalary ýükle',
-                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                      label: Text(
+                                        l.chatLoadOlder,
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                                       ),
                                       onPressed: () async {
                                         setState(() => _isLoadingOlder = true);
@@ -490,9 +500,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                         ),
                                       ),
                                       icon: const Icon(Icons.history_rounded, size: 18),
-                                      label: const Text(
-                                        'Öňki ýazyşmalary ýükle',
-                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      label: Text(
+                                        l.chatLoadOlder,
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                                       ),
                                       onPressed: () async {
                                         setState(() => _isLoadingOlder = true);
@@ -538,7 +548,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildDateBadge(context, _formatDateBadge(msg.timestamp)),
+                              _buildDateBadge(context, _formatDateBadge(context, msg.timestamp)),
                               bubble,
                             ],
                           );
@@ -565,6 +575,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }
 
   Widget _buildReplyPreviewBar(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final msg = _replyingTo!;
 
@@ -620,7 +631,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           IconButton(
             icon: const Icon(Icons.close_rounded, size: 18),
             color: cs.onSurfaceVariant,
-            tooltip: 'Ýatyr',
+            tooltip: l.chatCancel,
             onPressed: _cancelReply,
           ),
         ],
@@ -678,6 +689,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }
 
   Widget _buildComposer(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
 
     return Container(
@@ -710,8 +722,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 style: const TextStyle(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: _replyingTo != null
-                      ? '${_replyingTo!.senderName} üçin jogap…'
-                      : 'Hat ýazyň…',
+                      ? l.chatReplyHint(_replyingTo!.senderName)
+                      : l.chatHint,
                   hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(

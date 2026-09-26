@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:topar_115/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:topar_115/features/announcements/presentation/screens/announcements_screen.dart';
 import 'package:topar_115/features/chat/presentation/screens/group_chat_screen.dart';
@@ -60,35 +61,36 @@ class _FifteenNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return NavigationBar(
       selectedIndex: activeIndex,
       onDestinationSelected: onTap,
       animationDuration: const Duration(milliseconds: 400),
-      destinations: const [
+      destinations: [
         NavigationDestination(
-          icon: Icon(Icons.campaign_outlined),
-          selectedIcon: Icon(Icons.campaign_rounded),
-          label: 'Duyduryşlar',
+          icon: const Icon(Icons.campaign_outlined),
+          selectedIcon: const Icon(Icons.campaign_rounded),
+          label: l.tabAnnouncements,
         ),
         NavigationDestination(
-          icon: Icon(Icons.chat_bubble_outline_rounded),
-          selectedIcon: Icon(Icons.chat_bubble_rounded),
-          label: 'Chat',
+          icon: const Icon(Icons.chat_bubble_outline_rounded),
+          selectedIcon: const Icon(Icons.chat_bubble_rounded),
+          label: l.tabChat,
         ),
         NavigationDestination(
-          icon: Icon(Icons.calendar_today_outlined),
-          selectedIcon: Icon(Icons.calendar_today_rounded),
-          label: 'Raspisanie',
+          icon: const Icon(Icons.calendar_today_outlined),
+          selectedIcon: const Icon(Icons.calendar_today_rounded),
+          label: l.tabTimetable,
         ),
         NavigationDestination(
-          icon: Icon(Icons.menu_book_outlined),
-          selectedIcon: Icon(Icons.menu_book_rounded),
-          label: 'Sapaklar',
+          icon: const Icon(Icons.menu_book_outlined),
+          selectedIcon: const Icon(Icons.menu_book_rounded),
+          label: l.tabSubjects,
         ),
         NavigationDestination(
-          icon: Icon(Icons.settings_outlined),
-          selectedIcon: Icon(Icons.settings_rounded),
-          label: 'Sazlamalar',
+          icon: const Icon(Icons.settings_outlined),
+          selectedIcon: const Icon(Icons.settings_rounded),
+          label: l.tabSettings,
         ),
       ],
     );

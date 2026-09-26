@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:topar_115/app/app.dart';
 
 // ── Data Models ──────────────────────────────────────────────────────────────
 
@@ -68,6 +69,15 @@ const _dayNames = {
   6: 'Şenbe',
 };
 
+const _enDayNames = {
+  1: 'Monday',
+  2: 'Tuesday',
+  3: 'Wednesday',
+  4: 'Thursday',
+  5: 'Friday',
+  6: 'Saturday',
+};
+
 const _dayShort = {
   1: 'Duş',
   2: 'Siş',
@@ -75,6 +85,15 @@ const _dayShort = {
   4: 'Penş',
   5: 'Ann',
   6: 'Şen',
+};
+
+const _enDayShort = {
+  1: 'Mon',
+  2: 'Tue',
+  3: 'Wed',
+  4: 'Thu',
+  5: 'Fri',
+  6: 'Sat',
 };
 
 // Subject color mapping
@@ -111,6 +130,8 @@ class TimetableScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocale = ref.watch(localeProvider);
+    final isEn = currentLocale.languageCode == 'en';
     final selectedDay = ref.watch(_selectedDayProvider);
     final todayWeekday = DateTime.now().weekday;
     final cs = Theme.of(context).colorScheme;
@@ -144,7 +165,7 @@ class TimetableScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Raspisanie 📅',
+                    isEn ? 'Timetable 📅' : 'Raspisanie 📅',
                     style: tt.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
@@ -300,7 +321,7 @@ class TimetableScreen extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _dayShort[day]!,
+                                isEn ? _enDayShort[day]! : _dayShort[day]!,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -342,7 +363,7 @@ class TimetableScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    _dayNames[selectedDay]!,
+                    isEn ? _enDayNames[selectedDay]! : _dayNames[selectedDay]!,
                     style: tt.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -357,7 +378,7 @@ class TimetableScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Şu gün',
+                        isEn ? 'Today' : 'Şu gün',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -368,7 +389,7 @@ class TimetableScreen extends ConsumerWidget {
                   ],
                   const Spacer(),
                   Text(
-                    '${classes.length} sapak',
+                    isEn ? '${classes.length} classes' : '${classes.length} sapak',
                     style: tt.bodySmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),

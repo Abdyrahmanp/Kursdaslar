@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:topar_115/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:topar_115/app/app.dart';
-import 'package:topar_115/core/constants/app_constants.dart';
 import 'package:topar_115/core/utils/haptic_utils.dart';
 import 'package:topar_115/features/announcements/data/models/announcement_model.dart';
 import 'package:topar_115/features/announcements/data/repositories/announcement_repository.dart';
-import 'package:topar_115/features/announcements/data/repositories/student_repository.dart';
-import 'package:topar_115/features/announcements/presentation/widgets/recipient_list_tile.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:topar_115/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:topar_115/features/subjects/presentation/screens/subjects_screen.dart';
@@ -51,31 +48,31 @@ class NormalStudentScreen extends ConsumerWidget {
           ref.read(normalTabProvider.notifier).state = i;
         },
         animationDuration: const Duration(milliseconds: 400),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.campaign_outlined),
-            selectedIcon: Icon(Icons.campaign_rounded),
-            label: 'Duyduryşlar',
+            icon: const Icon(Icons.campaign_outlined),
+            selectedIcon: const Icon(Icons.campaign_rounded),
+            label: AppLocalizations.of(context).tabAnnouncements,
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
-            selectedIcon: Icon(Icons.chat_bubble_rounded),
-            label: 'Chat',
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            selectedIcon: const Icon(Icons.chat_bubble_rounded),
+            label: AppLocalizations.of(context).tabChat,
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today_rounded),
-            label: 'Raspisanie',
+            icon: const Icon(Icons.calendar_today_outlined),
+            selectedIcon: const Icon(Icons.calendar_today_rounded),
+            label: AppLocalizations.of(context).tabTimetable,
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book_rounded),
-            label: 'Sapaklar',
+            icon: const Icon(Icons.menu_book_outlined),
+            selectedIcon: const Icon(Icons.menu_book_rounded),
+            label: AppLocalizations.of(context).tabSubjects,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Sazlamalar',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings_rounded),
+            label: AppLocalizations.of(context).tabSettings,
           ),
         ],
       ),
@@ -142,7 +139,7 @@ class _AnnouncementsView extends ConsumerWidget {
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
               title: Text(
-                'Kursdaşlar 🎓',
+                AppLocalizations.of(context).announcementsTitle,
                 style: tt.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
