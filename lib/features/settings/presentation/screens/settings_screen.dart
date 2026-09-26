@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:topar_115/app/app.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
 import 'package:topar_115/core/utils/haptic_utils.dart';
@@ -191,10 +192,12 @@ class SettingsScreen extends ConsumerWidget {
                         title: 'Türkmençe',
                         subtitle: 'Ene dili',
                         isSelected: currentLocale.languageCode == 'tk',
-                        onTap: () {
+                        onTap: () async {
                           HapticUtils.light();
                           ref.read(localeProvider.notifier).state =
                               const Locale('tk');
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('kursdaslar_locale', 'tk');
                         },
                       ),
                       Divider(
@@ -208,10 +211,12 @@ class SettingsScreen extends ConsumerWidget {
                         title: 'English',
                         subtitle: 'English language',
                         isSelected: currentLocale.languageCode == 'en',
-                        onTap: () {
+                        onTap: () async {
                           HapticUtils.light();
                           ref.read(localeProvider.notifier).state =
                               const Locale('en');
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('kursdaslar_locale', 'en');
                         },
                       ),
                     ],
@@ -497,8 +502,8 @@ class SettingsScreen extends ConsumerWidget {
                               border: Border.all(
                                   color: cs.outlineVariant.withAlpha(70)),
                             ),
-                            child: const Text(
-                              'Kursdaşlar v2.4.0',
+                            child: Text(
+                              'Kursdaşlar v${AppConstants.appVersion}',
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.bold,

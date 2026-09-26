@@ -2,7 +2,7 @@ name: topar_115
 description: "Fifteen — Dual-mode (Offline GSM + Online Realtime) Student Group Management App."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.8+8
 
 environment:
   sdk: ^3.11.1

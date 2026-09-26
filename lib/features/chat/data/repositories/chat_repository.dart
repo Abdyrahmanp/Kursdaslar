@@ -25,10 +25,10 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   Future<void> _initChat() async {
-    // 1. Ilki offline/lokal cache-den hatlary derrew ekrana çykar
-    await _loadCachedMessages();
-    // 2. Soňra serwerden iň soňky hatlary çek
-    await loadMessages();
+    // 1. Täze giren ulanyjy üçin chat alany boş başlaýar (öňki hatlary awtomatiki indirmez)
+    state = const [];
+    // 2. Serwerdäki iň soňky hatyň ID-sini alýarys (diňe şondan soňky täze hatlary real-wagtda görkezmek üçin)
+    await _initLatestId();
     // 3. 3 sekuntdan bir täze hat barlygyny barla
     _startPolling();
   }
@@ -40,7 +40,24 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     });
   }
 
-  /// Lokal ýatdan saklanan hatlary okamak
+  /// Serwerdäki iň soňky hatyň ID-sini anyklamak (chat alanyna goşmazdan)
+  Future<void> _initLatestId() async {
+    try {
+      final latest = await _apiService.fetchMessages(limit: 1);
+      if (latest.isNotEmpty) {
+        final lastMsg = latest.last;
+        _lastSeenId = int.tryParse(lastMsg.id) ?? 0;
+        _ref?.read(hasOlderMessagesProvider.notifier).state = true;
+      } else {
+        _ref?.read(hasOlderMessagesProvider.notifier).state = false;
+      }
+    } catch (e) {
+      debugPrint('[ChatNotifier] _initLatestId error: $e');
+      _ref?.read(hasOlderMessagesProvider.notifier).state = true;
+    }
+  }
+
+  /// Lokal ýatdan saklanan hatlary okamak (islege görä)
   Future<void> _loadCachedMessages() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -62,11 +79,10 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  /// Hatlary lokal ýatda saklamak (offline-da hem durar ýaly)
+  /// Hatlary lokal ýatda saklamak
   Future<void> _saveCachedMessages(List<ChatMessage> messages) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Pending/failed hatlary cache-e goşma — diňe hakyky hatlary sakla
       final toSave = messages
           .where((m) => !m.isPending && !m.isFailed)
           .toList();
@@ -89,54 +105,46 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  /// Serwerden hatlary çekmek
-  Future<void> loadMessages() async {
+  /// Öňki ýazyşmalary ýüklemek (10 hat limit bilen)
+  Future<void> loadOlderMessages() async {
     try {
-      // Eger öňden görülen hatlar bar bolsa, diňe şondan soňky täze hatlary çek
-      if (_lastSeenId > 0) {
-        await _pollNewMessages();
+      // Eger chat alany entek boş bolsa: iň soňky 10 haty ýükle
+      if (state.isEmpty) {
+        final messages = await _apiService.fetchMessages(limit: 10);
+        if (messages.isNotEmpty) {
+          state = messages;
+          _updateLastSeenId(messages);
+          if (messages.length < 10) {
+            _ref?.read(hasOlderMessagesProvider.notifier).state = false;
+          } else {
+            _ref?.read(hasOlderMessagesProvider.notifier).state = true;
+          }
+        } else {
+          _ref?.read(hasOlderMessagesProvider.notifier).state = false;
+        }
         return;
       }
 
-      // Täze giren ýagdaýynda: diňe soňky 25 haty ýükle
-      final messages = await _apiService.fetchMessages(limit: 25);
-      if (messages.isNotEmpty) {
-        final pendingMsgs = state.where((m) => m.isPending).toList();
-        state = [...messages, ...pendingMsgs];
-        _updateLastSeenId(messages);
-        await _saveCachedMessages(messages);
-        if (messages.length >= 25 && _ref != null) {
-          _ref.read(hasOlderMessagesProvider.notifier).state = true;
-        }
-      }
-    } catch (e) {
-      debugPrint('[ChatNotifier] loadMessages error: $e');
-    }
-  }
-
-  /// Öňki ýazyşmalary ýüklemek (ilkinji/iň köne görkezilen hatdan öňki 25 hat)
-  Future<void> loadOlderMessages() async {
-    try {
+      // Eger hatlar bar bolsa: iň birinji (iň köne) hatdan öňki 10 haty getir
       final oldestMsg = state
           .where((m) => !m.isPending && int.tryParse(m.id) != null)
           .firstOrNull;
       if (oldestMsg == null) {
-        if (_ref != null) _ref.read(hasOlderMessagesProvider.notifier).state = false;
+        _ref?.read(hasOlderMessagesProvider.notifier).state = false;
         return;
       }
 
       final beforeId = int.parse(oldestMsg.id);
-      final older = await _apiService.fetchOlderMessages(beforeId: beforeId, limit: 25);
+      final older = await _apiService.fetchOlderMessages(beforeId: beforeId, limit: 10);
       if (older.isNotEmpty) {
         final existingIds = state.map((m) => m.id).toSet();
         final filtered = older.where((m) => !existingIds.contains(m.id)).toList();
         if (filtered.isNotEmpty) {
           state = [...filtered, ...state];
-          await _saveCachedMessages(state);
         }
       }
-      if (older.length < 25 && _ref != null) {
-        _ref.read(hasOlderMessagesProvider.notifier).state = false;
+      if (older.length < 10) {
+        _ref?.read(hasOlderMessagesProvider.notifier).state = false;
       }
     } catch (e) {
       debugPrint('[ChatNotifier] loadOlderMessages error: $e');
@@ -146,7 +154,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   /// Polling: Diňe täze gelen hatlary almak
   Future<void> _pollNewMessages() async {
     if (_lastSeenId == 0) {
-      await loadMessages();
+      await _initLatestId();
       return;
     }
     try {
@@ -320,7 +328,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 }
 
-final hasOlderMessagesProvider = StateProvider<bool>((ref) => false);
+final hasOlderMessagesProvider = StateProvider<bool>((ref) => true);
 
 final chatProvider =
     StateNotifierProvider<ChatNotifier, List<ChatMessage>>((ref) {

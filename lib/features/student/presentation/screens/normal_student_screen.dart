@@ -90,9 +90,14 @@ class _AnnouncementsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
-    final announcements = ref.watch(announcementProvider);
+    final allAnnouncements = ref.watch(announcementProvider);
     final syncStatus = ref.watch(announcementSyncStatusProvider);
     final currentStudent = authState.currentStudent;
+    final announcements = authState.isStarshy
+        ? allAnnouncements
+        : allAnnouncements
+            .where((a) => a.isRecipient(currentStudent?.id, currentStudent?.phone))
+            .toList();
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 

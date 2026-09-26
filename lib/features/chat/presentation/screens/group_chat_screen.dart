@@ -17,6 +17,7 @@ class GroupChatScreen extends ConsumerStatefulWidget {
 class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final _focusNode = FocusNode();
   bool _canSend = false;
   bool _isSending = false;
   bool _isLoadingOlder = false;
@@ -42,6 +43,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   void dispose() {
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -63,6 +65,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   void _setReply(ChatMessage msg) {
     HapticUtils.light();
     setState(() => _replyingTo = msg);
+    // Sağa çekende klawýatura awtomatiki açylmaly
+    _focusNode.requestFocus();
   }
 
   void _cancelReply() {
@@ -379,7 +383,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             tooltip: 'Hatlary täzele',
             onPressed: () {
               HapticUtils.light();
-              ref.read(chatProvider.notifier).loadMessages();
+              ref.read(chatProvider.notifier).loadOlderMessages();
               Future.delayed(const Duration(milliseconds: 500), () {
                 _scrollToBottom();
               });
@@ -424,13 +428,47 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                 color: cs.onSurfaceVariant,
                               ),
                             ),
+                            if (hasOlder) ...[
+                              const Gap(18),
+                              _isLoadingOlder
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: cs.surfaceContainerHighest.withAlpha(120),
+                                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.history_rounded, size: 18),
+                                      label: const Text(
+                                        'Öňki ýazyşmalary ýükle',
+                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                      ),
+                                      onPressed: () async {
+                                        setState(() => _isLoadingOlder = true);
+                                        try {
+                                          await ref.read(chatProvider.notifier).loadOlderMessages();
+                                        } finally {
+                                          if (mounted) setState(() => _isLoadingOlder = false);
+                                        }
+                                      },
+                                    ),
+                            ],
                           ],
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      controller: _scrollCtrl,
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  : ScrollConfiguration(
+                      behavior: const ScrollBehavior().copyWith(overscroll: false),
+                      child: ListView.builder(
+                        controller: _scrollCtrl,
+                        physics: const ClampingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       itemCount: messages.length + (hasOlder ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (hasOlder && index == 0) {
@@ -509,6 +547,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         return bubble;
                       },
                     ),
+                  ),
             ),
 
             // Active Reply bar (Jogap berilýän hat)
@@ -664,6 +703,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               ),
               child: TextField(
                 controller: _msgCtrl,
+                focusNode: _focusNode,
                 minLines: 1,
                 maxLines: null,
                 textCapitalization: TextCapitalization.sentences,

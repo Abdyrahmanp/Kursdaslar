@@ -82,8 +82,10 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       setState(() => _isPostingOnline = true);
       HapticUtils.medium();
 
-      final selectedCount = ref.read(smsDispatcherProvider).selectedIds.length;
-      final count = selectedCount == 0 ? 25 : selectedCount;
+      final selectedIds = ref.read(smsDispatcherProvider).selectedIds.toList();
+      final isAll = selectedIds.isEmpty || selectedIds.length == 25;
+      final targetList = isAll ? <String>[] : selectedIds;
+      final count = isAll ? 25 : selectedIds.length;
 
       try {
         final success = await ref
@@ -92,6 +94,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
               content: message,
               isUrgent: _isUrgent,
               recipientCount: count,
+              targetIds: targetList,
             );
 
         if (mounted) {
@@ -108,7 +111,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                   Expanded(
                     child: Text(
                       success
-                          ? '🌐 Duýduryş onlaýn serwere ugradyldy! Talyplar derrew görer.'
+                          ? (isAll
+                              ? '🌐 Duýduryş ähli talyplar üçin ugradyldy!'
+                              : '🌐 Duýduryş saýlanan ${targetList.length} talyp üçin ugradyldy!')
                           : '⚠️ Serwere ugradylmady, emma ýerli ýatda saklandy.',
                     ),
                   ),
@@ -135,13 +140,16 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     // ── Mode 2: Dual Mode (Post Online + SMS Dispatch) ───────────────────────
     if (_dispatchMode == DispatchMode.dual) {
       setState(() => _isPostingOnline = true);
-      final selectedCount = ref.read(smsDispatcherProvider).selectedIds.length;
-      final count = selectedCount == 0 ? 25 : selectedCount;
+      final selectedIds = ref.read(smsDispatcherProvider).selectedIds.toList();
+      final isAll = selectedIds.isEmpty || selectedIds.length == 25;
+      final targetList = isAll ? <String>[] : selectedIds;
+      final count = isAll ? 25 : selectedIds.length;
 
       ref.read(announcementProvider.notifier).sendOnlineAnnouncement(
             content: message,
             isUrgent: _isUrgent,
             recipientCount: count,
+            targetIds: targetList,
           );
     }
 
@@ -178,9 +186,11 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         _dialogOpen = false;
         final result = next.status as DispatchDone;
         if (_msgCtrl.text.trim().isNotEmpty) {
+          final selIds = ref.read(smsDispatcherProvider).selectedIds.toList();
           ref.read(announcementProvider.notifier).addAnnouncement(
                 content: _msgCtrl.text.trim(),
                 recipientCount: result.sentCount,
+                targetIds: selIds.length == 25 ? <String>[] : selIds,
               );
           _msgCtrl.clear();
         }
@@ -484,7 +494,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                     _buildModeChip(
                       mode: DispatchMode.dual,
                       icon: Icons.bolt_rounded,
-                      label: 'Hem internet, hem SMS',
+                      label: 'Ikisem',
                     ),
                   ],
                 ),
@@ -759,7 +769,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         can = state.canDispatch && !_isPostingOnline;
         icon = Icons.bolt_rounded;
         label = can
-            ? '⚡ Hem internet, hem SMS (${state.selectedIds.length} talyp)'
+            ? '⚡ Ikisem (${state.selectedIds.length} talyp)'
             : 'Talyplary saýlaň we hat ýazyň';
         break;
     }

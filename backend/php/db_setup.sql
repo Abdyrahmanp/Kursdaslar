@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     body        TEXT          NOT NULL,
     sender_name VARCHAR(100)  NOT NULL DEFAULT 'Admin',
     sender_role VARCHAR(30)   NOT NULL DEFAULT 'admin',
+    target_ids  TEXT          NULL,
     created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

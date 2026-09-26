@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:topar_115/app/app.dart';
 import 'package:topar_115/app/theme/app_theme.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
@@ -26,9 +27,17 @@ void main() async {
     ),
   );
 
+  // Load saved locale preference (defaults to Turkmen if not set).
+  final prefs = await SharedPreferences.getInstance();
+  final savedLang = prefs.getString('kursdaslar_locale') ?? 'tk';
+  final savedLocale = Locale(savedLang);
+
   runApp(
-    const ProviderScope(
-      child: _FifteenRoot(),
+    ProviderScope(
+      overrides: [
+        localeProvider.overrideWith((ref) => savedLocale),
+      ],
+      child: const _FifteenRoot(),
     ),
   );
 }

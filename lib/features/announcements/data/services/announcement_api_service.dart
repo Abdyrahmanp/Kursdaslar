@@ -50,10 +50,17 @@ class AnnouncementApiService {
     String senderName = 'Tuşiýewa Abadan (Starşy)',
     String senderRole = 'starshy',
     bool isUrgent = false,
+    List<String> targetIds = const [],
   }) async {
     try {
       final finalTitle = title ??
           (content.length > 40 ? '${content.substring(0, 40)}…' : content);
+
+      String effectiveBody = content;
+      if (targetIds.isNotEmpty && !targetIds.contains('all')) {
+        // Embed targets in body comment tag for backwards compatibility with existing PHP backend
+        effectiveBody = '$content\n<!--targets:${targetIds.join(',')}-->';
+      }
 
       final response = await _client
           .post(
@@ -64,9 +71,10 @@ class AnnouncementApiService {
             },
             body: jsonEncode({
               'title': finalTitle,
-              'body': content,
+              'body': effectiveBody,
               'sender_name': senderName,
               'sender_role': senderRole,
+              'target_ids': targetIds.join(','),
             }),
           )
           .timeout(AppConstants.apiTimeout);

@@ -17,6 +17,7 @@ abstract final class AppConstants {
   // ── Class Info ────────────────────────────────────────────────────────────
   static const String className = 'TOPAR-115';
   static const String appName = 'Kursdaşlar';
+  static const String appVersion = '1.0.8';
   static const int totalStudents = 25;
 
   // ── Animation Durations ───────────────────────────────────────────────────

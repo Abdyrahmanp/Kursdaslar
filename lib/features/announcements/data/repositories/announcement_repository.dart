@@ -128,6 +128,7 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
     String senderPhone = '+993 61 76 28 19',
     int recipientCount = 25,
     bool isUrgent = false,
+    List<String> targetIds = const [],
   }) async {
     final effectiveTitle = title ??
         (content.length > 30 ? '${content.substring(0, 30)}…' : content);
@@ -143,6 +144,7 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
       recipientCount: recipientCount,
       isUrgent: isUrgent,
       isOnline: true,
+      targetIds: targetIds,
     );
 
     try {
@@ -152,6 +154,7 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
         senderName: senderName,
         senderRole: isUrgent ? 'starshy' : 'student',
         isUrgent: isUrgent,
+        targetIds: targetIds,
       );
 
       if (ok) {
@@ -181,6 +184,7 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
     required String content,
     int recipientCount = 25,
     bool isUrgent = false,
+    List<String> targetIds = const [],
   }) {
     final title =
         content.length > 30 ? '${content.substring(0, 30)}…' : content;
@@ -195,6 +199,7 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
       recipientCount: recipientCount,
       isUrgent: isUrgent,
       isOnline: false,
+      targetIds: targetIds,
     );
 
     state = [newAnn, ...state];

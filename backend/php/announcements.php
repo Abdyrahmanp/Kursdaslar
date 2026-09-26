@@ -15,8 +15,10 @@ if ($method === 'GET') {
 
     if ($db) {
         try {
+            // Check & auto-add column if not exists
+            @$db->query("ALTER TABLE announcements ADD COLUMN target_ids TEXT NULL");
             $stmt = $db->prepare(
-                'SELECT id, title, body, sender_name, sender_role, created_at
+                'SELECT id, title, body, sender_name, sender_role, target_ids, created_at
                  FROM announcements
                  ORDER BY created_at DESC
                  LIMIT ?'
@@ -45,6 +47,7 @@ if ($method === 'GET') {
             'body' => 'Salam topar! Ertir ir bilen sagat 09:00-da bolmaly dersimiz sagat 10:30-a geçirildi. Ähliňiz wagtynda geliň.',
             'sender_name' => 'Tuşiýewa Abadan (Starşy)',
             'sender_role' => 'starshy',
+            'target_ids' => '',
             'created_at' => date('Y-m-d H:i:s', strtotime('-2 hours')),
         ],
         [
@@ -53,6 +56,7 @@ if ($method === 'GET') {
             'body' => 'Iňlis dili we Ýapon dili dersi boýunça berlen amaly işleri şu hepdäniň ahyryna çenli tabşyrmaly.',
             'sender_name' => 'Tuşiýewa Abadan (Starşy)',
             'sender_role' => 'starshy',
+            'target_ids' => '',
             'created_at' => date('Y-m-d H:i:s', strtotime('-1 day')),
         ],
     ]);
@@ -67,6 +71,7 @@ if ($method === 'POST') {
     $text        = trim($body['body']        ?? '');
     $senderName  = trim($body['sender_name'] ?? 'Tuşiýewa Abadan (Starşy)');
     $senderRole  = trim($body['sender_role'] ?? 'starshy');
+    $targetIds   = trim($body['target_ids']  ?? '');
 
     if ($title === '' || $text === '') {
         jsonError('Başlyk we tekst hökman gerek!');
@@ -74,12 +79,13 @@ if ($method === 'POST') {
 
     if ($db) {
         try {
+            @$db->query("ALTER TABLE announcements ADD COLUMN target_ids TEXT NULL");
             $stmt = $db->prepare(
-                'INSERT INTO announcements (title, body, sender_name, sender_role)
-                 VALUES (?, ?, ?, ?)'
+                'INSERT INTO announcements (title, body, sender_name, sender_role, target_ids)
+                 VALUES (?, ?, ?, ?, ?)'
             );
             if ($stmt) {
-                $stmt->bind_param('ssss', $title, $text, $senderName, $senderRole);
+                $stmt->bind_param('sssss', $title, $text, $senderName, $senderRole, $targetIds);
                 if ($stmt->execute()) {
                     $id = $db->insert_id;
                     $stmt->close();
@@ -100,6 +106,7 @@ if ($method === 'POST') {
         'body' => $text,
         'sender_name' => $senderName,
         'sender_role' => $senderRole,
+        'target_ids' => $targetIds,
         'created_at' => date('Y-m-d H:i:s'),
     ];
     array_unshift($rows, $newItem);
