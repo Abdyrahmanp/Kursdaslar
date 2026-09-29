@@ -7,6 +7,9 @@ import 'package:topar_115/features/settings/presentation/screens/settings_screen
 import 'package:topar_115/features/subjects/presentation/screens/subjects_screen.dart';
 import 'package:topar_115/features/timetable/presentation/screens/timetable_screen.dart';
 
+import 'package:flutter/services.dart';
+import 'package:gap/gap.dart';
+
 // ── Active Tab Provider ───────────────────────────────────────────────────────
 
 final activeTabProvider = StateProvider<int>((ref) => 0);
@@ -24,28 +27,78 @@ final activeTabProvider = StateProvider<int>((ref) => 0);
 class FifteenScaffold extends ConsumerWidget {
   const FifteenScaffold({super.key});
 
+  Future<void> _showExitConfirmationDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.exit_to_app_rounded, color: Colors.redAccent),
+            Gap(10),
+            Text('Çykmak isleýärsiňizmi?'),
+          ],
+        ),
+        content: const Text(
+          'Hakykatdan hem programmadan çykmak isleýärsiňizmi?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Ýok'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Hawa, Çyk'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTab = ref.watch(activeTabProvider);
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: IndexedStack(
-        index: activeTab,
-        children: const [
-          AnnouncementsScreen(),
-          GroupChatScreen(),
-          TimetableScreen(),
-          SubjectsScreen(),
-          SettingsScreen(),
-        ],
-      ),
-      bottomNavigationBar: _FifteenNavBar(
-        activeIndex: activeTab,
-        onTap: (i) {
-          ref.read(activeTabProvider.notifier).state = i;
-        },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (activeTab != 0) {
+          // Eger chat, raspisanie, sapaklar, sazlamalar sekmesinde bolsa: duýduryşlara geç
+          ref.read(activeTabProvider.notifier).state = 0;
+        } else {
+          // Eger eýýäm duýduryşlar sekmesinde bolsa: çykmak tassyklama penjiresini çykar
+          await _showExitConfirmationDialog(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: cs.surface,
+        body: IndexedStack(
+          index: activeTab,
+          children: const [
+            AnnouncementsScreen(),
+            GroupChatScreen(),
+            TimetableScreen(),
+            SubjectsScreen(),
+            SettingsScreen(),
+          ],
+        ),
+        bottomNavigationBar: _FifteenNavBar(
+          activeIndex: activeTab,
+          onTap: (i) {
+            ref.read(activeTabProvider.notifier).state = i;
+          },
+        ),
       ),
     );
   }

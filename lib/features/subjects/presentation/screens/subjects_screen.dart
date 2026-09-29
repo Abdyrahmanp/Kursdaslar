@@ -22,173 +22,201 @@ class SubjectsScreen extends ConsumerWidget {
     final contentCtrl = TextEditingController();
     final homeworkCtrl = TextEditingController();
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      barrierDismissible: false,
       builder: (ctx) {
         bool isSubmitting = false;
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade400,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const Gap(16),
-                    Text(
-                      'Täze Sapak Temasyny Goşmak 📝',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const Gap(16),
+            final cs = Theme.of(context).colorScheme;
+            final tt = Theme.of(context).textTheme;
 
-                    // Subject dropdown
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedSubjectId,
-                      decoration: InputDecoration(
-                        labelText: 'Sapagy saýlaň',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      items: state.subjects.map((s) {
-                        return DropdownMenuItem(
-                          value: s.id,
-                          child: Text('${s.code} — ${s.name}'),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() => selectedSubjectId = val);
-                        }
-                      },
-                    ),
-                    const Gap(12),
-
-                    // Topic Title
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Tema ady (Mysal: 1-nji Tema: ...)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                    const Gap(12),
-
-                    // Topic Description
-                    TextField(
-                      controller: contentCtrl,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: 'Ders barada maglumat / konspekt',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                    const Gap(12),
-
-                    // Homework
-                    TextField(
-                      controller: homeworkCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Öý işi / Ýumuş (Hökmany däl)',
-                        prefixIcon: const Icon(Icons.assignment_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                    const Gap(20),
-
-                    // Save button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        icon: isSubmitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer,
+                                  shape: BoxShape.circle,
                                 ),
-                              )
-                            : const Icon(Icons.check_rounded),
-                        label: Text(isSubmitting ? 'Ýüklenýär…' : 'Temany Ýatda Sakla'),
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                                child: Icon(Icons.edit_note_rounded, color: cs.primary, size: 22),
+                              ),
+                              const Gap(10),
+                              Text(
+                                'Täze Sapak Temasy 📝',
+                                style: tt.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const Gap(16),
+
+                      // Subject dropdown
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedSubjectId,
+                        decoration: InputDecoration(
+                          labelText: 'Sapagy saýlaň',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                if (titleCtrl.text.trim().isEmpty) return;
-                                setModalState(() => isSubmitting = true);
-
-                                try {
-                                  final creator = authState.currentStudent?.name ??
-                                      'Tuşiýewa Abadan (Starşy)';
-
-                                  final ok = await ref.read(subjectsProvider.notifier).addTopic(
-                                        subjectId: selectedSubjectId,
-                                        title: titleCtrl.text.trim(),
-                                        content: contentCtrl.text.trim(),
-                                        homework: homeworkCtrl.text.trim(),
-                                        createdBy: creator,
-                                      );
-
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    HapticUtils.medium();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          ok
-                                              ? '🎉 Täze tema serwere üstünlikli goşuldy!'
-                                              : '💾 Tema goşuldy we telefonyňyzda saklandy!',
-                                        ),
-                                        backgroundColor: ok ? const Color(0xFF059669) : Colors.orange.shade800,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } finally {
-                                  setModalState(() => isSubmitting = false);
-                                }
-                              },
+                        items: state.subjects.map((s) {
+                          return DropdownMenuItem(
+                            value: s.id,
+                            child: Text('${s.code} — ${s.name}'),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => selectedSubjectId = val);
+                          }
+                        },
                       ),
-                    ),
-                  ],
+                      const Gap(12),
+
+                      // Topic Title
+                      TextField(
+                        controller: titleCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Tema ady (Mysal: 1-nji Tema: ...)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                      const Gap(12),
+
+                      // Topic Description
+                      TextField(
+                        controller: contentCtrl,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          labelText: 'Ders barada maglumat / konspekt',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                      const Gap(12),
+
+                      // Homework
+                      TextField(
+                        controller: homeworkCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Öý işi / Ýumuş (Hökmany däl)',
+                          prefixIcon: const Icon(Icons.assignment_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                      const Gap(20),
+
+                      // Actions
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                              child: const Text('Ýatyr'),
+                            ),
+                          ),
+                          const Gap(12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              icon: isSubmitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.check_rounded),
+                              label: Text(isSubmitting ? 'Ýüklenýär…' : 'Temany Ýatda Sakla'),
+                              style: FilledButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () async {
+                                      if (titleCtrl.text.trim().isEmpty) return;
+                                      setModalState(() => isSubmitting = true);
+
+                                      try {
+                                        final creator = authState.currentStudent?.name ??
+                                            'Tuşiýewa Abadan (Starşy)';
+
+                                        final ok = await ref.read(subjectsProvider.notifier).addTopic(
+                                              subjectId: selectedSubjectId,
+                                              title: titleCtrl.text.trim(),
+                                              content: contentCtrl.text.trim(),
+                                              homework: homeworkCtrl.text.trim(),
+                                              createdBy: creator,
+                                            );
+
+                                        if (context.mounted) {
+                                          Navigator.pop(ctx);
+                                          HapticUtils.medium();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                ok
+                                                    ? '🎉 Täze tema serwere üstünlikli goşuldy!'
+                                                    : '💾 Tema goşuldy we telefonyňyzda saklandy!',
+                                              ),
+                                              backgroundColor:
+                                                  ok ? const Color(0xFF059669) : Colors.orange.shade800,
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        setModalState(() => isSubmitting = false);
+                                      }
+                                    },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -413,130 +441,148 @@ class _TopicCard extends ConsumerWidget {
     final titleCtrl = TextEditingController(text: topic.title);
     final contentCtrl = TextEditingController(text: topic.content);
     final homeworkCtrl = TextEditingController(text: topic.homework);
-    bool isSubmitting = false;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      barrierDismissible: false,
       builder: (ctx) {
+        bool isSubmitting = false;
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade400,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const Gap(16),
-                    Text(
-                      'Temany Üýtget ✏️',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const Gap(16),
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Tema ady',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                    const Gap(12),
-                    TextField(
-                      controller: contentCtrl,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: 'Ders barada maglumat / konspekt',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                    const Gap(12),
-                    TextField(
-                      controller: homeworkCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Öý işi / Ýumuş (Hökmany däl)',
-                        prefixIcon: const Icon(Icons.assignment_outlined),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                    const Gap(20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        icon: isSubmitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+            final cs = Theme.of(context).colorScheme;
+            final tt = Theme.of(context).textTheme;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer,
+                                  shape: BoxShape.circle,
                                 ),
-                              )
-                            : const Icon(Icons.check_rounded),
-                        label: Text(isSubmitting ? 'Ýüklenýär…' : 'Üýtgetmeleri Sakla'),
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                                child: Icon(Icons.edit_rounded, color: cs.primary, size: 22),
+                              ),
+                              const Gap(10),
+                              Text(
+                                'Temany Üýtget ✏️',
+                                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
-                        ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                if (titleCtrl.text.trim().isEmpty) return;
-                                setModalState(() => isSubmitting = true);
-                                try {
-                                  await ref.read(subjectsProvider.notifier).editTopic(
-                                        topicId: topic.id,
-                                        title: titleCtrl.text.trim(),
-                                        content: contentCtrl.text.trim(),
-                                        homework: homeworkCtrl.text.trim(),
-                                      );
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    HapticUtils.medium();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('✅ Tema üstünlikli üýtgedildi!'),
-                                        backgroundColor: const Color(0xFF059669),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } finally {
-                                  setModalState(() => isSubmitting = false);
-                                }
-                              },
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const Gap(16),
+                      TextField(
+                        controller: titleCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Tema ady',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const Gap(12),
+                      TextField(
+                        controller: contentCtrl,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          labelText: 'Ders barada maglumat / konspekt',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const Gap(12),
+                      TextField(
+                        controller: homeworkCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Öý işi / Ýumuş (Hökmany däl)',
+                          prefixIcon: const Icon(Icons.assignment_outlined),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const Gap(20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                              child: const Text('Ýatyr'),
+                            ),
+                          ),
+                          const Gap(12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              icon: isSubmitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.check_rounded),
+                              label: Text(isSubmitting ? 'Ýüklenýär…' : 'Üýtgetmeleri Sakla'),
+                              style: FilledButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () async {
+                                      if (titleCtrl.text.trim().isEmpty) return;
+                                      setModalState(() => isSubmitting = true);
+                                      try {
+                                        await ref.read(subjectsProvider.notifier).editTopic(
+                                              topicId: topic.id,
+                                              title: titleCtrl.text.trim(),
+                                              content: contentCtrl.text.trim(),
+                                              homework: homeworkCtrl.text.trim(),
+                                            );
+                                        if (context.mounted) {
+                                          Navigator.pop(ctx);
+                                          HapticUtils.medium();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text('✅ Tema üstünlikli üýtgedildi!'),
+                                              backgroundColor: const Color(0xFF059669),
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        setModalState(() => isSubmitting = false);
+                                      }
+                                    },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -777,130 +823,148 @@ class TopicDetailScreen extends ConsumerWidget {
     final titleCtrl = TextEditingController(text: currentTopic.title);
     final contentCtrl = TextEditingController(text: currentTopic.content);
     final homeworkCtrl = TextEditingController(text: currentTopic.homework);
-    bool isSubmitting = false;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      barrierDismissible: false,
       builder: (ctx) {
+        bool isSubmitting = false;
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade400,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const Gap(16),
-                    Text(
-                      'Temany Üýtget ✏️',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const Gap(16),
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Tema ady',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                    const Gap(12),
-                    TextField(
-                      controller: contentCtrl,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: 'Ders barada maglumat / konspekt',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                    const Gap(12),
-                    TextField(
-                      controller: homeworkCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Öý işi / Ýumuş (Hökmany däl)',
-                        prefixIcon: const Icon(Icons.assignment_outlined),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                    const Gap(20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        icon: isSubmitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+            final cs = Theme.of(context).colorScheme;
+            final tt = Theme.of(context).textTheme;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer,
+                                  shape: BoxShape.circle,
                                 ),
-                              )
-                            : const Icon(Icons.check_rounded),
-                        label: Text(isSubmitting ? 'Ýüklenýär…' : 'Üýtgetmeleri Sakla'),
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                                child: Icon(Icons.edit_rounded, color: cs.primary, size: 22),
+                              ),
+                              const Gap(10),
+                              Text(
+                                'Temany Üýtget ✏️',
+                                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
-                        ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                if (titleCtrl.text.trim().isEmpty) return;
-                                setModalState(() => isSubmitting = true);
-                                try {
-                                  await ref.read(subjectsProvider.notifier).editTopic(
-                                        topicId: currentTopic.id,
-                                        title: titleCtrl.text.trim(),
-                                        content: contentCtrl.text.trim(),
-                                        homework: homeworkCtrl.text.trim(),
-                                      );
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    HapticUtils.medium();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('✅ Tema üstünlikli üýtgedildi!'),
-                                        backgroundColor: const Color(0xFF059669),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } finally {
-                                  setModalState(() => isSubmitting = false);
-                                }
-                              },
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const Gap(16),
+                      TextField(
+                        controller: titleCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Tema ady',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const Gap(12),
+                      TextField(
+                        controller: contentCtrl,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          labelText: 'Ders barada maglumat / konspekt',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const Gap(12),
+                      TextField(
+                        controller: homeworkCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Öý işi / Ýumuş (Hökmany däl)',
+                          prefixIcon: const Icon(Icons.assignment_outlined),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const Gap(20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                              child: const Text('Ýatyr'),
+                            ),
+                          ),
+                          const Gap(12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              icon: isSubmitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.check_rounded),
+                              label: Text(isSubmitting ? 'Ýüklenýär…' : 'Üýtgetmeleri Sakla'),
+                              style: FilledButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () async {
+                                      if (titleCtrl.text.trim().isEmpty) return;
+                                      setModalState(() => isSubmitting = true);
+                                      try {
+                                        await ref.read(subjectsProvider.notifier).editTopic(
+                                              topicId: currentTopic.id,
+                                              title: titleCtrl.text.trim(),
+                                              content: contentCtrl.text.trim(),
+                                              homework: homeworkCtrl.text.trim(),
+                                            );
+                                        if (context.mounted) {
+                                          Navigator.pop(ctx);
+                                          HapticUtils.medium();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text('✅ Tema üstünlikli üýtgedildi!'),
+                                              backgroundColor: const Color(0xFF059669),
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        setModalState(() => isSubmitting = false);
+                                      }
+                                    },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

@@ -25,11 +25,28 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   Future<void> _initChat() async {
-    // 1. Täze giren ulanyjy üçin chat alany boş başlaýar (öňki hatlary awtomatiki indirmez)
-    state = const [];
-    // 2. Serwerdäki iň soňky hatyň ID-sini alýarys (diňe şondan soňky täze hatlary real-wagtda görkezmek üçin)
+    // 1. Öňki ýerli ýatda saklanan (cache) hatlary derrew ekrana çykar (boş bolmasyn)
+    await _loadCachedMessages();
+
+    // 2. Eger ýerli ýat entek boş bolsa, serwerden iň soňky hatlary çek
+    if (state.isEmpty) {
+      try {
+        final initial = await _apiService.fetchMessages(limit: 15);
+        final valid = _filterExpiredMessages(initial);
+        if (valid.isNotEmpty) {
+          state = valid;
+          _updateLastSeenId(valid);
+          await _saveCachedMessages(valid);
+        }
+      } catch (e) {
+        debugPrint('[ChatNotifier] Initial fetch error: $e');
+      }
+    }
+
+    // 3. Serwerdäki iň soňky hatyň ID-sini alýarys
     await _initLatestId();
-    // 3. 3 sekuntdan bir täze hat barlygyny barla
+
+    // 4. Täze hatlary soramak üçin polling başla
     _startPolling();
   }
 
@@ -40,15 +57,24 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     });
   }
 
-  /// Serwerdäki iň soňky hatyň ID-sini anyklamak (chat alanyna goşmazdan)
+  /// 7 günden geçen hatlary arassalamak (Möhleti geçen hatlar görkezilmeýär)
+  List<ChatMessage> _filterExpiredMessages(List<ChatMessage> list) {
+    return list.where((m) => !m.isExpired).toList();
+  }
+
+  /// Serwerdäki iň soňky hatyň ID-sini anyklamak
   Future<void> _initLatestId() async {
     try {
       final latest = await _apiService.fetchMessages(limit: 1);
-      if (latest.isNotEmpty) {
-        final lastMsg = latest.last;
-        _lastSeenId = int.tryParse(lastMsg.id) ?? 0;
+      final valid = _filterExpiredMessages(latest);
+      if (valid.isNotEmpty) {
+        final lastMsg = valid.last;
+        final idNum = int.tryParse(lastMsg.id) ?? 0;
+        if (idNum > _lastSeenId) {
+          _lastSeenId = idNum;
+        }
         _ref?.read(hasOlderMessagesProvider.notifier).state = true;
-      } else {
+      } else if (latest.isEmpty) {
         _ref?.read(hasOlderMessagesProvider.notifier).state = false;
       }
     } catch (e) {
@@ -57,7 +83,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  /// Lokal ýatdan saklanan hatlary okamak (islege görä)
+  /// Lokal ýatdan saklanan hatlary okamak
   Future<void> _loadCachedMessages() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -65,12 +91,19 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
       if (cachedJson != null && cachedJson.isNotEmpty) {
         final decoded = jsonDecode(cachedJson);
         if (decoded is List) {
-          final list = decoded
+          final rawList = decoded
               .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
               .toList();
-          if (list.isNotEmpty && state.isEmpty) {
-            state = list;
-            _updateLastSeenId(list);
+          final validList = _filterExpiredMessages(rawList);
+
+          if (validList.length != rawList.length) {
+            // Möhleti geçen hatlar arassalandy, täze halyny ýatda sakla
+            await _saveCachedMessages(validList);
+          }
+
+          if (validList.isNotEmpty) {
+            state = validList;
+            _updateLastSeenId(validList);
           }
         }
       }
@@ -79,15 +112,15 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  /// Hatlary lokal ýatda saklamak
+  /// Hatlary lokal ýatda saklamak (diňe möhleti geçmedik 7 günlik hatlar)
   Future<void> _saveCachedMessages(List<ChatMessage> messages) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final toSave = messages
-          .where((m) => !m.isPending && !m.isFailed)
-          .toList();
-      final limited = toSave.length > 80
-          ? toSave.sublist(toSave.length - 80)
+      final toSave = _filterExpiredMessages(
+        messages.where((m) => !m.isPending && !m.isFailed).toList(),
+      );
+      final limited = toSave.length > 100
+          ? toSave.sublist(toSave.length - 100)
           : toSave;
       final raw = jsonEncode(limited.map((m) => m.toJson()).toList());
       await prefs.setString(_prefKeyChatCache, raw);
@@ -105,46 +138,65 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  /// Öňki ýazyşmalary ýüklemek (10 hat limit bilen)
+  /// Öňki ýazyşmalary ýüklemek (yzygiderli 10 hat limit bilen)
   Future<void> loadOlderMessages() async {
     try {
-      // Eger chat alany entek boş bolsa: iň soňky 10 haty ýükle
+      // Eger chat alany boş bolsa: iň soňky 10 haty ýükle
       if (state.isEmpty) {
         final messages = await _apiService.fetchMessages(limit: 10);
-        if (messages.isNotEmpty) {
-          state = messages;
-          _updateLastSeenId(messages);
-          if (messages.length < 10) {
-            _ref?.read(hasOlderMessagesProvider.notifier).state = false;
-          } else {
-            _ref?.read(hasOlderMessagesProvider.notifier).state = true;
-          }
+        final valid = _filterExpiredMessages(messages);
+        if (valid.isNotEmpty) {
+          state = valid;
+          _updateLastSeenId(valid);
+          await _saveCachedMessages(valid);
+          _ref?.read(hasOlderMessagesProvider.notifier).state = messages.length >= 10;
         } else {
           _ref?.read(hasOlderMessagesProvider.notifier).state = false;
         }
         return;
       }
 
-      // Eger hatlar bar bolsa: iň birinji (iň köne) hatdan öňki 10 haty getir
-      final oldestMsg = state
-          .where((m) => !m.isPending && int.tryParse(m.id) != null)
-          .firstOrNull;
-      if (oldestMsg == null) {
+      // Eger hatlar bar bolsa: iň kiçi (iň köne) hatyň ID-sini tap
+      int? minId;
+      for (final m in state) {
+        final parsed = int.tryParse(m.id);
+        if (parsed != null && !m.isPending) {
+          if (minId == null || parsed < minId) {
+            minId = parsed;
+          }
+        }
+      }
+
+      if (minId == null || minId <= 1) {
         _ref?.read(hasOlderMessagesProvider.notifier).state = false;
         return;
       }
 
-      final beforeId = int.parse(oldestMsg.id);
-      final older = await _apiService.fetchOlderMessages(beforeId: beforeId, limit: 10);
-      if (older.isNotEmpty) {
+      final older = await _apiService.fetchOlderMessages(beforeId: minId, limit: 10);
+      final validOlder = _filterExpiredMessages(older);
+
+      if (validOlder.isNotEmpty) {
         final existingIds = state.map((m) => m.id).toSet();
-        final filtered = older.where((m) => !existingIds.contains(m.id)).toList();
-        if (filtered.isNotEmpty) {
-          state = [...filtered, ...state];
+        final newItems = validOlder.where((m) => !existingIds.contains(m.id)).toList();
+        if (newItems.isNotEmpty) {
+          final merged = [...newItems, ...state];
+          // Tertibi: iň köneden iň täzä tarap
+          merged.sort((a, b) {
+            final aId = int.tryParse(a.id);
+            final bId = int.tryParse(b.id);
+            if (aId != null && bId != null) return aId.compareTo(bId);
+            return a.timestamp.compareTo(b.timestamp);
+          });
+          state = merged;
+          await _saveCachedMessages(merged);
         }
       }
+
+      // Eger serwerden gelen hat sany 10-dan az bolsa ýa-da möhleti geçen bolsa, indiki gezek öňki ýok
       if (older.length < 10) {
         _ref?.read(hasOlderMessagesProvider.notifier).state = false;
+      } else {
+        _ref?.read(hasOlderMessagesProvider.notifier).state = true;
       }
     } catch (e) {
       debugPrint('[ChatNotifier] loadOlderMessages error: $e');
@@ -165,17 +217,20 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
             .where((m) => !m.isPending && !m.isFailed)
             .map((m) => m.id)
             .toSet();
-        final filtered = newMessages.where((m) => !existingIds.contains(m.id)).toList();
+        final filtered = _filterExpiredMessages(
+          newMessages.where((m) => !existingIds.contains(m.id)).toList(),
+        );
 
         if (filtered.isNotEmpty) {
-          // Pending hatlary sakla
+          // Pending hatlary sakla, möhleti geçenleri arassala
           final pendingMsgs = state.where((m) => m.isPending).toList();
-          final withoutPending = state.where((m) => !m.isPending).toList();
+          final withoutPending = _filterExpiredMessages(
+            state.where((m) => !m.isPending).toList(),
+          );
           final updated = [...withoutPending, ...filtered, ...pendingMsgs];
           state = updated;
           _updateLastSeenId(filtered);
-          final toCache = updated.where((m) => !m.isPending && !m.isFailed).toList();
-          await _saveCachedMessages(toCache);
+          await _saveCachedMessages(updated);
         }
       }
     } catch (_) {

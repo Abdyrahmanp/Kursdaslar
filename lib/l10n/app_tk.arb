@@ -103,8 +103,10 @@
   "loginLastName": "Familiýaňyz",
   "loginLastNameHint": "Familiýaňyzy giriziň",
   "loginPhone": "Telefon belgisi",
+  "loginPassword": "Parol",
+  "loginPasswordHint": "Parolyňyzy giriziň",
   "loginButton": "Ulgama gir",
-  "loginEmptyFields": "Haýyş, adyňyzy, familiýaňyzy we telefon belgiňizi giriziň!",
+  "loginEmptyFields": "Haýyş, adyňyzy, familiýaňyzy, telefon belgiňizi we şifräňizi giriziň!",
 
   "composeLabel": "Duyuru / Habar",
   "composePlaceholder": "Duyuryňyzy ýazyň…",

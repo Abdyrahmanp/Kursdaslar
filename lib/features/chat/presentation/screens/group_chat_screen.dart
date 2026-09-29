@@ -285,6 +285,139 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     );
   }
 
+  void _showChatInfoDialog(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.info_rounded, color: cs.primary, size: 24),
+              ),
+              const Gap(12),
+              Expanded(
+                child: Text(
+                  'Topar Çatyň Maglumaty',
+                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Gap(8),
+                // 1. Möhlet / Expiration Card
+                _buildInfoItem(
+                  context,
+                  icon: Icons.timer_outlined,
+                  color: Colors.amber.shade800,
+                  title: 'Hatlaryň Saklanyş Möhleti (7 Gün)',
+                  description:
+                      'Çatdaky ähli ýazyşmalar we hatlar 7 günden soň awtomatiki ýagdaýda ulgamdan we serwerden doly pozulýar. Zerur amaly işleri we konspektleri wagtly-wagtynda belläp alyň.',
+                ),
+                const Gap(12),
+                // 2. Rules Card
+                _buildInfoItem(
+                  context,
+                  icon: Icons.rule_rounded,
+                  color: const Color(0xFF6366F1),
+                  title: 'Çatyň Düzgünleri',
+                  description:
+                      'Toparda diňe okuw, dersler we topar maglumatlary ara alnyp maslahatlaşylmalydyr. Birek-birege sylagly, edepli we hormatly boluň.',
+                ),
+                const Gap(12),
+                // 3. Server Status Card
+                _buildInfoItem(
+                  context,
+                  icon: Icons.cloud_outlined,
+                  color: const Color(0xFF059669),
+                  title: 'Serwer we Tor Ýagdaýy',
+                  description:
+                      'Çat onlaýn bulut arkaly işleýär. Internet aragatnaşygy pes bolanda ýa-da serwerde profilaktika wagtynda hatlaryň barmagy gijigip biler. Eger hat gitmedik bolsa, ýanyndaky gaýtala belgisini basyp bilersiňiz.',
+                ),
+                const Gap(12),
+              ],
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: const Text('Düşnükli'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoItem(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String description,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const Gap(10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: tt.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const Gap(4),
+                Text(
+                  description,
+                  style: tt.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool _isDifferentDay(DateTime d1, DateTime d2) {
     final l1 = d1.toLocal();
     final l2 = d2.toLocal();
@@ -350,11 +483,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final tt = Theme.of(context).textTheme;
     final canModerate = _canModerate(authState);
 
-    // Täze hat gelende awtomatiki aşaga süýşür
+    // Täze hat gelende awtomatiki aşaga süýşür (öňki hatlar ýüklenýän mahaly däl)
     if (messages.length > _lastMessageCount) {
       _lastMessageCount = messages.length;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scrollCtrl.hasClients) return;
+        if (!_scrollCtrl.hasClients || _isLoadingOlder) return;
         final pos = _scrollCtrl.position;
         final atBottom = pos.maxScrollExtent - pos.pixels < 120;
         if (atBottom || _lastMessageCount <= 3) {
@@ -389,14 +522,19 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.info_outline_rounded, color: Colors.white),
+            tooltip: 'Maglumat we Düzgünler',
+            onPressed: () {
+              HapticUtils.light();
+              _showChatInfoDialog(context);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: l.chatRefreshTooltip,
             onPressed: () {
               HapticUtils.light();
               ref.read(chatProvider.notifier).loadOlderMessages();
-              Future.delayed(const Duration(milliseconds: 500), () {
-                _scrollToBottom();
-              });
             },
           ),
         ],

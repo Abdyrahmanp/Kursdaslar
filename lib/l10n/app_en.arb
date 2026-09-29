@@ -103,8 +103,10 @@
   "loginLastName": "Last name",
   "loginLastNameHint": "Enter your last name",
   "loginPhone": "Phone number",
+  "loginPassword": "Password",
+  "loginPasswordHint": "Enter your password",
   "loginButton": "Sign in",
-  "loginEmptyFields": "Please enter your name, surname and phone number!",
+  "loginEmptyFields": "Please enter your name, surname, phone number and password!",
 
   "composeLabel": "Announcement",
   "composePlaceholder": "Type your announcement here…",

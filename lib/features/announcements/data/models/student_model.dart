@@ -12,6 +12,9 @@ class Student {
   /// Phone number in E.164 format: "+993XXXXXXXX".
   final String phone;
 
+  /// Unique personal password assigned by admin. Case-sensitive.
+  final String password;
+
   /// Whether this student holds the Group Leader (Starstwa) role.
   final bool isGroupLeader;
 
@@ -22,6 +25,7 @@ class Student {
     required this.id,
     required this.name,
     required this.phone,
+    required this.password,
     required this.index,
     this.isGroupLeader = false,
   });

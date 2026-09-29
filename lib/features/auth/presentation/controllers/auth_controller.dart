@@ -54,7 +54,7 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  static const String _prefKeyPhone = 'topar115_saved_student_phone';
+  static const String _prefKeyId = 'topar115_saved_student_id';
 
   AuthNotifier() : super(const AuthState()) {
     _tryAutoLogin();
@@ -64,9 +64,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _tryAutoLogin() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedPhone = prefs.getString(_prefKeyPhone);
-      if (savedPhone != null && savedPhone.isNotEmpty) {
-        final match = StudentRepository.findStudentByPhone(savedPhone);
+      final savedId = prefs.getString(_prefKeyId);
+      if (savedId != null && savedId.isNotEmpty) {
+        final match = StudentRepository.findStudentById(savedId);
         if (match != null) {
           state = AuthState(
             currentStudent: match,
@@ -82,20 +82,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isInitialized: true);
   }
 
-  Future<void> _persistLogin(String phone) async {
+  Future<void> _persistLogin(String id) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefKeyPhone, phone);
+      await prefs.setString(_prefKeyId, id);
     } catch (e) {
       debugPrint('[AuthNotifier] Persist login error: $e');
     }
   }
 
-  /// Attempts login using separate first name, last name & phone number.
+
+  /// Attempts login using separate first name, last name, phone number & password.
   Future<bool> loginByFields({
     required String firstName,
     required String lastName,
     required String phone,
+    required String password,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
@@ -105,10 +107,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       firstName: firstName,
       lastName: lastName,
       phone: phone,
+      password: password,
     );
 
     if (match != null) {
-      await _persistLogin(match.phone);
+      await _persistLogin(match.id);
       state = AuthState(
         currentStudent: match,
         isLoading: false,
@@ -118,42 +121,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } else {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Bu toparda beýle talyp tapylmady. Adyňyzy, familiýaňyzy ýa-da nomeriňizi barlaşdyryň.',
+        errorMessage: 'Maglumatlaryňyz ýalňyş. Ad, familiýa, telefon belgisi ýa-da şifre dogry däl.',
       );
       return false;
     }
   }
 
-  /// Attempts login using student's full name & phone number.
-  Future<bool> login({required String name, required String phone}) async {
-    state = state.copyWith(isLoading: true, clearError: true);
 
-    await Future.delayed(const Duration(milliseconds: 250));
-
-    final match = StudentRepository.findStudent(name, phone);
-
-    if (match != null) {
-      await _persistLogin(match.phone);
-      state = AuthState(
-        currentStudent: match,
-        isLoading: false,
-        isInitialized: true,
-      );
-      return true;
-    } else {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: 'Bu toparda beýle talyp tapylmady. At, familiýa ýa-da nomeriňizi barlaşdyryň.',
-      );
-      return false;
-    }
-  }
 
   /// Logs out the current user and clears persistent session.
   Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_prefKeyPhone);
+      await prefs.remove(_prefKeyId);
     } catch (e) {
       debugPrint('[AuthNotifier] Logout error: $e');
     }

@@ -18,18 +18,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _firstNameCtrl = TextEditingController();
   final TextEditingController _lastNameCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
   final FocusNode _firstNameFocus = FocusNode();
   final FocusNode _lastNameFocus = FocusNode();
   final FocusNode _phoneFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
     _firstNameFocus.dispose();
     _lastNameFocus.dispose();
     _phoneFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -41,8 +46,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final firstName = _firstNameCtrl.text.trim();
     final lastName = _lastNameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
+    final password = _passwordCtrl.text.trim();
 
-    if (firstName.isEmpty || lastName.isEmpty || phone.isEmpty) {
+    if (firstName.isEmpty || lastName.isEmpty || phone.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -68,6 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           firstName: firstName,
           lastName: lastName,
           phone: fullPhone,
+          password: password,
         );
   }
 
@@ -88,29 +95,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ── Header Icon Badge ──────────────────────────────────────────
+                // ── Header Icon Badge / Logo ──────────────────────────────────
                 Container(
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [cs.primary, cs.tertiary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: cs.primary.withAlpha(80),
+                        color: cs.primary.withAlpha(50),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Text(
-                      '🎓',
-                      style: TextStyle(fontSize: 44),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
@@ -202,11 +207,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         controller: _phoneCtrl,
                         focusNode: _phoneFocus,
                         label: l.loginPhone,
-                        hintText: '61 76 28 19',
+                        hintText: '6X XX XX XX',
                         prefixText: '+993 ',
                         keyboardType: TextInputType.phone,
                         icon: Icons.phone_android_rounded,
                         onChanged: (_) => ref.read(authProvider.notifier).clearError(),
+                      ),
+                      const Gap(14),
+
+                      // Password Field
+                      FifteenTextField(
+                        controller: _passwordCtrl,
+                        focusNode: _passwordFocus,
+                        label: l.loginPassword,
+                        hintText: l.loginPasswordHint,
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _obscurePassword,
+                        onChanged: (_) => ref.read(authProvider.notifier).clearError(),
+                        trailing: GestureDetector(
+                          onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                          child: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                       const Gap(20),
 

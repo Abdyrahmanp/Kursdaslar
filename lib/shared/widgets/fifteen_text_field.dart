@@ -20,6 +20,7 @@ class FifteenTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final String? prefixText;
   final TextInputType? keyboardType;
+  final bool obscureText;
 
   const FifteenTextField({
     super.key,
@@ -34,6 +35,7 @@ class FifteenTextField extends StatefulWidget {
     this.onChanged,
     this.prefixText,
     this.keyboardType,
+    this.obscureText = false,
   });
 
   @override
@@ -98,9 +100,10 @@ class _FifteenTextFieldState extends State<FifteenTextField> {
             controller: widget.controller,
             focusNode: _focusNode,
             minLines: widget.minLines,
-            maxLines: widget.maxLines,
+            maxLines: widget.obscureText ? 1 : widget.maxLines,
             onChanged: widget.onChanged,
             keyboardType: widget.keyboardType,
+            obscureText: widget.obscureText,
             textCapitalization: widget.keyboardType == TextInputType.phone
                 ? TextCapitalization.none
                 : TextCapitalization.sentences,

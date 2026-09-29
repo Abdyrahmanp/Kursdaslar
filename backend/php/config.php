@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 @ini_set('display_errors', '0');
 @error_reporting(E_ALL);
 
+// Set default timezone to Turkmenistan (Asia/Ashgabat, UTC+5)
+@date_default_timezone_set('Asia/Ashgabat');
+
 // PHP fatal exception handler: never let unhandled exception become HTTP 500
 set_exception_handler(function(\Throwable $e) {
     http_response_code(200);
@@ -51,6 +54,7 @@ function getDB(): ?mysqli {
             $conn = @new mysqli($c['host'], $c['user'], $c['pass'], $c['db']);
             if ($conn && !$conn->connect_error) {
                 @$conn->set_charset('utf8mb4');
+                @$conn->query("SET time_zone = '+05:00'");
                 ensureTables($conn);
                 $cachedConn = $conn;
                 return $conn;

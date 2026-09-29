@@ -113,6 +113,29 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
     await loadData();
   }
 
+  List<Subject> _deduplicateSubjects(List<Subject> list) {
+    final seen = <String>{};
+    final result = <Subject>[];
+    for (final s in list) {
+      final key = s.name.trim().toLowerCase();
+      if (key.isNotEmpty && seen.add(key)) {
+        result.add(s);
+      }
+    }
+    return result;
+  }
+
+  List<Topic> _deduplicateTopics(List<Topic> list) {
+    final seen = <String>{};
+    final result = <Topic>[];
+    for (final t in list) {
+      if (t.id.isNotEmpty && seen.add(t.id)) {
+        result.add(t);
+      }
+    }
+    return result;
+  }
+
   Future<void> _loadCachedTopics() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -123,8 +146,9 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
           final list = decoded
               .map((e) => Topic.fromJson(e as Map<String, dynamic>))
               .toList();
-          if (list.isNotEmpty && state.topics.isEmpty) {
-            state = state.copyWith(topics: list);
+          final unique = _deduplicateTopics(list);
+          if (unique.isNotEmpty && state.topics.isEmpty) {
+            state = state.copyWith(topics: unique);
           }
         }
       }
@@ -136,7 +160,8 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
   Future<void> _saveCachedTopics(List<Topic> topics) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = jsonEncode(topics.map((t) => t.toJson()).toList());
+      final unique = _deduplicateTopics(topics);
+      final raw = jsonEncode(unique.map((t) => t.toJson()).toList());
       await prefs.setString(_prefKeyTopics, raw);
     } catch (e) {
       debugPrint('[SubjectsNotifier] Save cached topics error: $e');
@@ -157,18 +182,20 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
       final remoteSubs = await _apiService.fetchSubjects();
       final remoteTopics = await _apiService.fetchAllTopics();
 
-      // Remote temalar gelende, eger boş gelmese täzele.
-      // Eger boş gelse, öňki bar bolan temalary sakla (pozma).
-      final newTopics = remoteTopics.isNotEmpty ? remoteTopics : state.topics;
+      // Gaýtalanýan dersleri we temalary aýyrmak (deduplication)
+      final uniqueSubs = _deduplicateSubjects(remoteSubs);
+      final uniqueTopics = _deduplicateTopics(
+        remoteTopics.isNotEmpty ? remoteTopics : state.topics,
+      );
 
       state = state.copyWith(
-        subjects: remoteSubs.isNotEmpty ? remoteSubs : state.subjects,
-        topics: newTopics,
+        subjects: uniqueSubs.isNotEmpty ? uniqueSubs : _deduplicateSubjects(state.subjects),
+        topics: uniqueTopics,
         isLoading: false,
       );
 
       if (remoteTopics.isNotEmpty) {
-        await _saveCachedTopics(remoteTopics);
+        await _saveCachedTopics(uniqueTopics);
       }
     } catch (e) {
       debugPrint('[SubjectsNotifier] loadData error: $e');

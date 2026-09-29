@@ -255,6 +255,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       body: NestedScrollView(
+        physics: const ClampingScrollPhysics(),
         headerSliverBuilder: (ctx, innerBoxIsScrolled) => [
           // ── Gradient AppBar ──────────────────────────────────────────────
           _buildAppBar(context, innerBoxIsScrolled),
@@ -301,11 +302,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     return SliverAppBar(
       expandedHeight: 130,
       pinned: true,
-      stretch: true,
       elevation: 0,
       backgroundColor: cs.primary,
       flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [StretchMode.zoomBackground],
         titlePadding: const EdgeInsets.only(left: 16, bottom: 14, right: 16),
         title: AnimatedOpacity(
           opacity: collapsed ? 1.0 : 0.0,
@@ -727,6 +726,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     }
 
     return ListView.builder(
+      physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
       itemCount: list.length,
       itemBuilder: (ctx, index) {

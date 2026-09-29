@@ -40,6 +40,9 @@ abstract final class AppConstants {
   /// Subjects & Topics endpoint
   static const String subjectsUrl = '$apiBaseUrl/subjects.php';
 
+  /// Feedback & Contact endpoint (döredijä hat ugratmak)
+  static const String feedbackUrl = '$apiBaseUrl/feedback.php';
+
   /// Timeout for API network requests.
   static const Duration apiTimeout = Duration(seconds: 15);
 

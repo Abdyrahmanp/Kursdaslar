@@ -608,6 +608,18 @@ abstract class AppLocalizations {
   /// **'Phone number'**
   String get loginPhone;
 
+  /// No description provided for @loginPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get loginPassword;
+
+  /// No description provided for @loginPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get loginPasswordHint;
+
   /// No description provided for @loginButton.
   ///
   /// In en, this message translates to:
@@ -617,7 +629,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginEmptyFields.
   ///
   /// In en, this message translates to:
-  /// **'Please enter your name, surname and phone number!'**
+  /// **'Please enter your name, surname, phone number and password!'**
   String get loginEmptyFields;
 
   /// No description provided for @composeLabel.

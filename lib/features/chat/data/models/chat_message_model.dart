@@ -60,6 +60,10 @@ class ChatMessage {
   bool get isAdmin => role == 'admin';
   bool get hasReply => replyTo != null && replyTo!.messageId.isNotEmpty;
 
+  /// 7 günden geçen hatlar möhleti geçen (expired) hasaplanýar
+  bool get isExpired =>
+      DateTime.now().difference(timestamp).inSeconds >= 7 * 86400;
+
   String get formattedTime {
     final local = timestamp.toLocal();
     final hour = local.hour.toString().padLeft(2, '0');

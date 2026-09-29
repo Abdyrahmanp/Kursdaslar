@@ -286,11 +286,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginPhone => 'Phone number';
 
   @override
+  String get loginPassword => 'Password';
+
+  @override
+  String get loginPasswordHint => 'Enter your password';
+
+  @override
   String get loginButton => 'Sign in';
 
   @override
   String get loginEmptyFields =>
-      'Please enter your name, surname and phone number!';
+      'Please enter your name, surname, phone number and password!';
 
   @override
   String get composeLabel => 'Announcement';

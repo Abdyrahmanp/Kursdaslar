@@ -8,7 +8,15 @@ $db       = getDB();
 $method   = $_SERVER['REQUEST_METHOD'];
 $jsonFile = 'data_messages.json';
 
-// ── GET: son mesajları getir ──────────────────
+// ── 7 günden geçen hatlary awtomatiki arassalamak ──
+$cutoffDate = date('Y-m-d H:i:s', strtotime('-7 days'));
+if ($db) {
+    try {
+        @$db->query("DELETE FROM chat_messages WHERE created_at < '$cutoffDate'");
+    } catch (\Throwable $e) {}
+}
+
+// ── GET: son mesajları getir (diňe soňky 7 günlik) ──
 if ($method === 'GET') {
     $afterId  = isset($_GET['after'])  ? (int)$_GET['after']  : 0;
     $beforeId = isset($_GET['before']) ? (int)$_GET['before'] : 0;
@@ -18,33 +26,34 @@ if ($method === 'GET') {
     if ($db) {
         try {
             if ($afterId > 0) {
-                // Sadece täze hatlar
+                // Sadece täze hatlar (iň soňky 7 gün)
                 $stmt = $db->prepare(
                     'SELECT id, sender_name, sender_role, message, created_at,
                             reply_to_id, reply_to_name, reply_to_text
                      FROM chat_messages
-                     WHERE id > ?
+                     WHERE id > ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                      ORDER BY id ASC
                      LIMIT ?'
                 );
                 $stmt->bind_param('ii', $afterId, $limit);
             } else if ($beforeId > 0) {
-                // Öňki hatlar (beforeId-den öňki)
+                // Öňki hatlar (beforeId-den öňki, iň soňky 7 gün)
                 $stmt = $db->prepare(
                     'SELECT id, sender_name, sender_role, message, created_at,
                             reply_to_id, reply_to_name, reply_to_text
                      FROM chat_messages
-                     WHERE id < ?
+                     WHERE id < ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                      ORDER BY id DESC
                      LIMIT ?'
                 );
                 $stmt->bind_param('ii', $beforeId, $limit);
             } else {
-                // Iň soňky N hat
+                // Iň soňky N hat (iň soňky 7 gün)
                 $stmt = $db->prepare(
                     'SELECT id, sender_name, sender_role, message, created_at,
                             reply_to_id, reply_to_name, reply_to_text
                      FROM chat_messages
+                     WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                      ORDER BY id DESC
                      LIMIT ?'
                 );
@@ -61,8 +70,15 @@ if ($method === 'GET') {
         } catch (\Throwable $e) {}
     }
 
-    // JSON file fallback
+    // JSON file fallback (7 günlik süzgüç bilen)
     $all = loadJsonFile($jsonFile, []);
+    $all = array_values(array_filter($all, function($m) use ($cutoffDate) {
+        $c = $m['created_at'] ?? '';
+        return $c === '' || $c >= $cutoffDate;
+    }));
+    // Arassalanan halyny ýatda sakla
+    saveJsonFile($jsonFile, $all);
+
     if ($afterId > 0) {
         $filtered = array_values(array_filter($all, fn($m) => (int)($m['id'] ?? 0) > $afterId));
         jsonOk(array_slice($filtered, 0, $limit));

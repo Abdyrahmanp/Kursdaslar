@@ -28,7 +28,7 @@ if ($method === 'GET') {
     if ($type === 'subjects') {
         if ($db) {
             try {
-                $res = $db->query('SELECT id, code, name, teacher FROM subjects ORDER BY id ASC');
+                $res = $db->query('SELECT MIN(id) AS id, code, name, MAX(teacher) AS teacher FROM subjects GROUP BY name, code ORDER BY MIN(id) ASC');
                 $rows = [];
                 if ($res) {
                     while ($row = $res->fetch_assoc()) $rows[] = $row;
@@ -37,7 +37,17 @@ if ($method === 'GET') {
             } catch (\Throwable $e) {}
         }
         $subs = loadJsonFile($jsonSubjects, $defaultSubjects);
-        jsonOk($subs);
+        // JSON süzgüji: gaýtalanýan dersleri aýyr
+        $unique = [];
+        $seen = [];
+        foreach ($subs as $s) {
+            $key = mb_strtolower(trim($s['name'] ?? ''));
+            if ($key !== '' && !isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[] = $s;
+            }
+        }
+        jsonOk($unique);
     }
 
     // Temalar

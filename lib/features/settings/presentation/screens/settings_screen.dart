@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:topar_115/app/app.dart';
 import 'package:topar_115/core/constants/app_constants.dart';
+import 'package:topar_115/core/network/byethost_http_client.dart';
 import 'package:topar_115/core/utils/haptic_utils.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:topar_115/l10n/app_localizations.dart';
@@ -11,6 +13,46 @@ import 'package:topar_115/l10n/app_localizations.dart';
 /// The unified settings screen for all users (both Starşy and Normal Students).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
+
+  void _showContactDialog(BuildContext context, WidgetRef ref) async {
+    final authState = ref.read(authProvider);
+    final student = authState.currentStudent;
+    final isStarshy = authState.isStarshy;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _ContactDialogContent(
+        studentName: student?.name ?? '',
+        studentPhone: student?.phone ?? '',
+        isStarshy: isStarshy,
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      HapticUtils.medium();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              Gap(10),
+              Expanded(
+                child: Text(
+                  'Hatyňyz döredijä üstünlikli ugradyldy! Sag boluň. 🎉',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF059669),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
@@ -373,6 +415,18 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Gap(28),
 
+                // ── Section 4: Habarlaşmak we Teklip (Feedback & Contact) ────
+                const _SectionTitle(
+                  icon: Icons.mark_email_unread_outlined,
+                  title: 'Habarlaşmak we Teklip',
+                  subtitle: 'Döredijä hat, sorag ýa-da teklip ugradyň',
+                ),
+                const Gap(12),
+                _FeedbackCard(
+                  onTap: () => _showContactDialog(context, ref),
+                ),
+                const Gap(28),
+
                 // ── Logout Button ───────────────────────────────────────────
                 SizedBox(
                   width: double.infinity,
@@ -698,3 +752,476 @@ class _ThemeTile extends StatelessWidget {
     );
   }
 }
+
+// ── Feedback Card ─────────────────────────────────────────────────────────────
+
+class _FeedbackCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _FeedbackCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticUtils.light();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withAlpha(25),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.mark_email_unread_rounded,
+                      color: Color(0xFF6366F1),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                const Gap(14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Döredijä hat ýazmak',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Gap(2),
+                      Text(
+                        'Sorag, mesele ýa-da teklip barmy? Göni ugradyň',
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant.withAlpha(160),
+                          fontSize: 11.5,
+                        ),
+                      ),
+                      const Gap(6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withAlpha(18),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.mail_outline_rounded,
+                                size: 12, color: Color(0xFF4F46E5)),
+                            Gap(4),
+                            Text(
+                              'abdyrahmandevoloper@gmail.com',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF4F46E5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Gap(8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest.withAlpha(120),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contact Dialog Content ────────────────────────────────────────────────────
+
+class _ContactDialogContent extends StatefulWidget {
+  final String studentName;
+  final String studentPhone;
+  final bool isStarshy;
+
+  const _ContactDialogContent({
+    required this.studentName,
+    required this.studentPhone,
+    required this.isStarshy,
+  });
+
+  @override
+  State<_ContactDialogContent> createState() => _ContactDialogContentState();
+}
+
+class _ContactDialogContentState extends State<_ContactDialogContent> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _messageController;
+  String _selectedCategory = '💡 Teklip';
+  bool _isSending = false;
+  String? _errorMessage;
+
+  static const List<String> _categories = [
+    '💡 Teklip',
+    '⚠️ Ýalňyşlyk',
+    '❓ Sorag',
+    '💬 Başga',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.studentName);
+    _phoneController = TextEditingController(text: widget.studentPhone);
+    _messageController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage() async {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) {
+      setState(() {
+        _errorMessage = 'Haýyş, hatyňyzyň mazmunyny ýazyň!';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSending = true;
+      _errorMessage = null;
+    });
+
+    final client = ByethostHttpClient();
+    try {
+      final response = await client.post(
+        Uri.parse(AppConstants.feedbackUrl),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode({
+          'name': _nameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'role': widget.isStarshy ? 'starshy' : 'student',
+          'subject': _selectedCategory,
+          'message': message,
+        }),
+      ).timeout(AppConstants.apiTimeout);
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _isSending = false;
+          _errorMessage =
+              'Serwer bilen baglanyşykda säwlik boldy (${response.statusCode}). Gaýtadan synanyşyň.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _errorMessage = 'Baglanyşyk ýalňyşlygy: Internetiňizi barlaň.';
+      });
+    } finally {
+      client.close();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      backgroundColor: cs.surface,
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withAlpha(25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.mark_email_unread_rounded,
+                      color: Color(0xFF6366F1),
+                      size: 24,
+                    ),
+                  ),
+                  const Gap(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Döredijä hat ýazmak',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'abdyrahmandevoloper@gmail.com',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: cs.onSurfaceVariant.withAlpha(180),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed:
+                        _isSending ? null : () => Navigator.of(context).pop(),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              const Gap(16),
+
+              // Info notice
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withAlpha(15),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: const Color(0xFF059669).withAlpha(40)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: Color(0xFF059669),
+                    ),
+                    Gap(8),
+                    Expanded(
+                      child: Text(
+                        'Hatyňyz gönümel döredijiniň poçtasyna we serwere ygtybarly ugradylar.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF047857),
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Gap(16),
+
+              // Category selector
+              Text(
+                'Hatyň görnüşi:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              const Gap(8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _categories.map((cat) {
+                  final isSel = _selectedCategory == cat;
+                  return ChoiceChip(
+                    label: Text(cat),
+                    selected: isSel,
+                    onSelected: _isSending
+                        ? null
+                        : (selected) {
+                            if (selected) {
+                              setState(() => _selectedCategory = cat);
+                            }
+                          },
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                      color: isSel ? cs.primary : cs.onSurfaceVariant,
+                    ),
+                    backgroundColor: cs.surfaceContainerLow,
+                    selectedColor: cs.primaryContainer,
+                    side: BorderSide(
+                      color:
+                          isSel ? cs.primary : cs.outlineVariant.withAlpha(60),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const Gap(14),
+
+              // Name and Phone
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _nameController,
+                      enabled: !_isSending,
+                      decoration: InputDecoration(
+                        labelText: 'Adyňyz',
+                        labelStyle: const TextStyle(fontSize: 12),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const Gap(10),
+                  Expanded(
+                    child: TextField(
+                      controller: _phoneController,
+                      enabled: !_isSending,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Telefon',
+                        labelStyle: const TextStyle(fontSize: 12),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(14),
+
+              // Message field
+              TextField(
+                controller: _messageController,
+                enabled: !_isSending,
+                minLines: 4,
+                maxLines: 7,
+                maxLength: 1000,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText:
+                      'Meseleňizi, teklibiňizi ýa-da soragyňyzy giňişleýin ýazyň...',
+                  hintStyle: TextStyle(
+                      fontSize: 13, color: cs.onSurfaceVariant.withAlpha(140)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  contentPadding: const EdgeInsets.all(14),
+                  alignLabelWithHint: true,
+                ),
+              ),
+
+              if (_errorMessage != null) ...[
+                const Gap(6),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Colors.red, size: 16),
+                    const Gap(6),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style:
+                            const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const Gap(18),
+
+              // Action buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed:
+                        _isSending ? null : () => Navigator.of(context).pop(),
+                    child: const Text('Ýatyr'),
+                  ),
+                  const Gap(10),
+                  FilledButton.icon(
+                    onPressed: _isSending ? null : _sendMessage,
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(_isSending ? 'Iberilýär...' : 'Ugrat'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
