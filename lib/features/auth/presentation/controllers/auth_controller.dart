@@ -22,19 +22,40 @@ class AuthState {
   bool get isStarshy => currentStudent?.isGroupLeader ?? false;
   bool get isGroupLeader => isStarshy;
 
-  /// Sapak temasyny diňe Starşy (Tuşiýewa Abadan) we Döwletgulyýew Abdyrahman goşup bilýär!
-  bool get canManageTopics {
+  /// Ygtyýarly şahslar (Starşy, Abdyrahman, Meredowa Arazjemal)
+  bool get isSpecialManager {
     final s = currentStudent;
     if (s == null) return false;
-    if (s.isGroupLeader) return true; // Starşy
+    if (s.isGroupLeader) return true; // Starşy (Tuşiýewa Abadan)
     final normName = StudentRepository.normalizeName(s.name);
+    final normPhone = StudentRepository.normalizePhone(s.phone);
     if (normName.contains('döwletguly') ||
         normName.contains('dowletguly') ||
-        s.phone.contains('65254766')) {
-      return true;
+        normPhone.endsWith('65254766')) {
+      return true; // Döwletgulyýew Abdyrahman
+    }
+    if (normName.contains('meredowa') ||
+        normName.contains('arazjemal') ||
+        normPhone.endsWith('65670096')) {
+      return true; // Meredowa Arazjemal
     }
     return false;
   }
+
+  /// Duýduryş habar ibermek rugsady
+  bool get canSendAnnouncements => isSpecialManager;
+
+  /// Duýduryşlary silmek we düzetmek rugsady
+  bool get canManageAnnouncements => isSpecialManager;
+
+  /// Çatda hatlary silmek we düzetmek rugsady
+  bool get canModerateChat => isSpecialManager;
+
+  /// Sapak temasyny goşmak rugsady
+  bool get canManageTopics => isSpecialManager;
+
+  /// Raspisaniýäni düzetmek we täze ders goşmak rugsady
+  bool get canManageTimetable => isSpecialManager;
 
   AuthState copyWith({
     Student? currentStudent,

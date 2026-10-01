@@ -119,15 +119,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     }
   }
 
-  /// Starşy ýa-da Döwletgulyýew Abdyrahman barlagy
+  /// Starşy, Abdyrahman we Meredowa Arazjemal barlagy
   bool _canModerate(AuthState authState) {
-    if (authState.isStarshy) return true;
-    final s = authState.currentStudent;
-    if (s == null) return false;
-    final name = s.name.toLowerCase();
-    return name.contains('döwletguly') ||
-        name.contains('dowletguly') ||
-        s.phone.contains('65254766');
+    return authState.canModerateChat;
   }
 
   void _showMessageMenu(BuildContext context, ChatMessage msg, AuthState authState) {
@@ -931,7 +925,6 @@ class _SwipeToReply extends StatefulWidget {
   final VoidCallback onReply;
 
   const _SwipeToReply({
-    super.key,
     required this.child,
     required this.onReply,
   });

@@ -86,5 +86,80 @@ class AnnouncementApiService {
     }
   }
 
+  // ── Duyuru sil ─────────────────────────────────────────────────────────────
+  Future<bool> deleteAnnouncement(String id) async {
+    try {
+      final uri = _annUri.replace(queryParameters: {'id': id});
+      final response = await _client
+          .delete(uri, headers: {'Accept': 'application/json'})
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) return true;
+
+      // Fallback: POST with _method = DELETE if server restricts DELETE
+      final fallbackResponse = await _client.post(
+        _annUri,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'_method': 'DELETE', 'id': id}),
+      ).timeout(AppConstants.apiTimeout);
+
+      return fallbackResponse.statusCode == 200;
+    } catch (e) {
+      debugPrint('[AnnouncementApiService] deleteAnnouncement error: $e');
+      return false;
+    }
+  }
+
+  // ── Duyuru düzenle ─────────────────────────────────────────────────────────
+  Future<bool> updateAnnouncement({
+    required String id,
+    required String title,
+    required String content,
+    bool isUrgent = false,
+    List<String>? targetIds,
+  }) async {
+    try {
+      final payload = {
+        'id': id,
+        'title': title,
+        'body': content,
+        'is_urgent': isUrgent ? 1 : 0,
+        if (targetIds != null) 'target_ids': targetIds.join(','),
+      };
+
+      final response = await _client
+          .put(
+            _annUri,
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) return true;
+
+      // Fallback: POST with _method = PUT
+      final fallbackPayload = Map<String, dynamic>.from(payload)..['_method'] = 'PUT';
+      final fallbackResponse = await _client.post(
+        _annUri,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(fallbackPayload),
+      ).timeout(AppConstants.apiTimeout);
+
+      return fallbackResponse.statusCode == 200;
+    } catch (e) {
+      debugPrint('[AnnouncementApiService] updateAnnouncement error: $e');
+      return false;
+    }
+  }
+
   void dispose() => _client.close();
 }

@@ -6,6 +6,12 @@ require_once __DIR__ . '/config.php';
 
 $db     = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'POST') {
+    $rawBodyCheck = getBody();
+    if (isset($rawBodyCheck['_method'])) {
+        $method = strtoupper($rawBodyCheck['_method']);
+    }
+}
 $jsonFile = 'data_announcements.json';
 
 // ── GET: ähli duýduryşlary getir ───────────────
@@ -112,6 +118,67 @@ if ($method === 'POST') {
     array_unshift($rows, $newItem);
     saveJsonFile($jsonFile, $rows);
     jsonOk(['id' => $newId, 'message' => 'Duýduryş üstünlikli goşuldy!']);
+}
+
+// ── DELETE: duýduryşy poz ───────────────────────
+if ($method === 'DELETE') {
+    $body = getBody();
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)($body['id'] ?? 0);
+    if ($id <= 0) {
+        jsonError('Geçerli ID gerek!', 400);
+    }
+
+    if ($db) {
+        try {
+            $stmt = $db->prepare('DELETE FROM announcements WHERE id = ?');
+            if ($stmt) {
+                $stmt->bind_param('i', $id);
+                $stmt->execute();
+                $stmt->close();
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    $rows = loadJsonFile($jsonFile, []);
+    $rows = array_values(array_filter($rows, fn($r) => (int)($r['id'] ?? 0) !== $id));
+    saveJsonFile($jsonFile, $rows);
+    jsonOk(['message' => 'Duýduryş üstünlikli pozuldy!']);
+}
+
+// ── PUT: duýduryşy düzet ───────────────────────
+if ($method === 'PUT') {
+    $body  = getBody();
+    $id    = (int)($body['id'] ?? $_GET['id'] ?? 0);
+    $title = trim($body['title'] ?? '');
+    $text  = trim($body['body'] ?? $body['content'] ?? '');
+    $targetIds = isset($body['target_ids']) ? trim($body['target_ids']) : null;
+
+    if ($id <= 0 || ($title === '' && $text === '')) {
+        jsonError('ID we üýtgediljek maglumat hökman gerek!', 400);
+    }
+
+    if ($db) {
+        try {
+            $stmt = $db->prepare('UPDATE announcements SET title = ?, body = ? WHERE id = ?');
+            if ($stmt) {
+                $stmt->bind_param('ssi', $title, $text, $id);
+                $stmt->execute();
+                $stmt->close();
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    $rows = loadJsonFile($jsonFile, []);
+    foreach ($rows as &$r) {
+        if ((int)($r['id'] ?? 0) === $id) {
+            if ($title !== '') $r['title'] = $title;
+            if ($text !== '') $r['body'] = $text;
+            if ($targetIds !== null) $r['target_ids'] = $targetIds;
+            break;
+        }
+    }
+    saveJsonFile($jsonFile, $rows);
+    jsonOk(['message' => 'Duýduryş üstünlikli üýtgedildi!']);
 }
 
 jsonError('Rugsat berilmedik usul', 405);

@@ -68,10 +68,8 @@ class _FifteenRoot extends ConsumerWidget {
       );
     } else if (!authState.isAuthenticated) {
       homeScreen = const LoginScreen();
-    } else if (authState.isStarshy) {
-      homeScreen = const FifteenScaffold();
     } else {
-      homeScreen = const NormalStudentScreen();
+      homeScreen = const FifteenScaffold();
     }
 
     return MaterialApp(

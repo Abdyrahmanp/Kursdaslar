@@ -117,17 +117,18 @@ function ensureTables(mysqli $conn): void {
         INDEX idx_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    // Default subjects if table is empty
-    $res = @$conn->query("SELECT COUNT(*) AS cnt FROM subjects");
-    if ($res && ($row = $res->fetch_assoc()) && (int)$row['cnt'] === 0) {
-        @$conn->query("INSERT INTO subjects (code, name, teacher) VALUES
-            ('ENG', 'Iňlis dili', ''),
-            ('JPN', 'Ýapon dili', ''),
-            ('TKM', 'Türkmen dili', ''),
-            ('INF', 'Informatika', ''),
-            ('MAT', 'Matematika', ''),
-            ('FIZ', 'Fizika', '')");
-    }
+    // Timetable
+    @$conn->query("CREATE TABLE IF NOT EXISTS timetable (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        day_of_week TINYINT UNSIGNED NOT NULL,
+        period TINYINT UNSIGNED NOT NULL,
+        subject VARCHAR(150) NOT NULL,
+        teacher VARCHAR(150) NOT NULL DEFAULT '',
+        room VARCHAR(50) NOT NULL DEFAULT '',
+        start_time VARCHAR(20) NOT NULL DEFAULT '',
+        end_time VARCHAR(20) NOT NULL DEFAULT '',
+        INDEX idx_day (day_of_week)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 // ── JSON Response Helpers ────────────────────

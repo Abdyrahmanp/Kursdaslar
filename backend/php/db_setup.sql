@@ -50,6 +50,19 @@ CREATE TABLE IF NOT EXISTS topics (
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ─── 5. Raspisaniýe (Timetable) ──────────────────────
+CREATE TABLE IF NOT EXISTS timetable (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    day_of_week TINYINT UNSIGNED NOT NULL,
+    period      TINYINT UNSIGNED NOT NULL,
+    subject     VARCHAR(150) NOT NULL,
+    teacher     VARCHAR(150) NOT NULL DEFAULT '',
+    room        VARCHAR(50)  NOT NULL DEFAULT '',
+    start_time  VARCHAR(20)  NOT NULL DEFAULT '',
+    end_time    VARCHAR(20)  NOT NULL DEFAULT '',
+    INDEX idx_day (day_of_week)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ═══════════════════════════════════════════════════
 --  Başlangıç verileri (Topar-115 dersler)
 -- ═══════════════════════════════════════════════════

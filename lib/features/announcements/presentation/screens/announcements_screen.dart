@@ -10,6 +10,7 @@ import 'package:topar_115/features/announcements/presentation/widgets/dispatch_p
 import 'package:topar_115/features/announcements/presentation/widgets/dispatch_summary_sheet.dart';
 import 'package:topar_115/features/announcements/presentation/widgets/recipient_list_tile.dart';
 import 'package:topar_115/features/announcements/presentation/widgets/sms_metrics_card.dart';
+import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 
 /// The primary screen for composing and dispatching offline GSM SMS alerts.
 ///
@@ -79,6 +80,13 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     final message = _msgCtrl.text.trim();
     if (message.isEmpty) return;
 
+    final authState = ref.read(authProvider);
+    final curStudent = authState.currentStudent;
+    final senderName = curStudent != null
+        ? '${curStudent.name}${authState.isStarshy ? ' (Starşy)' : ''}'
+        : 'Tuşiýewa Abadan (Starşy)';
+    final senderPhone = curStudent?.phone ?? '+993 61 76 28 19';
+
     // ── Mode 1: Online Only (Byethost Cloud Server) ──────────────────────
     if (_dispatchMode == DispatchMode.online) {
       setState(() => _isPostingOnline = true);
@@ -97,6 +105,8 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
               isUrgent: _isUrgent,
               recipientCount: count,
               targetIds: targetList,
+              senderName: senderName,
+              senderPhone: senderPhone,
             );
 
         if (mounted) {
@@ -152,6 +162,8 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
             isUrgent: _isUrgent,
             recipientCount: count,
             targetIds: targetList,
+            senderName: senderName,
+            senderPhone: senderPhone,
           );
     }
 
@@ -304,6 +316,12 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       pinned: true,
       elevation: 0,
       backgroundColor: cs.primary,
+      leading: Navigator.canPop(context)
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            )
+          : null,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.only(left: 16, bottom: 14, right: 16),
         title: AnimatedOpacity(

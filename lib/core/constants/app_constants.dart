@@ -40,6 +40,9 @@ abstract final class AppConstants {
   /// Subjects & Topics endpoint
   static const String subjectsUrl = '$apiBaseUrl/subjects.php';
 
+  /// Timetable endpoint
+  static const String timetableUrl = '$apiBaseUrl/timetable.php';
+
   /// Feedback & Contact endpoint (döredijä hat ugratmak)
   static const String feedbackUrl = '$apiBaseUrl/feedback.php';
 

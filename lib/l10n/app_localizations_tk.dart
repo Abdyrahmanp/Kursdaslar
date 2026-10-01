@@ -288,10 +288,10 @@ class AppLocalizationsTk extends AppLocalizations {
   String get loginPhone => 'Telefon belgisi';
 
   @override
-  String get loginPassword => 'Şifre';
+  String get loginPassword => 'Parol';
 
   @override
-  String get loginPasswordHint => 'Şifräňizi giriziň';
+  String get loginPasswordHint => 'Parolyňyzy giriziň';
 
   @override
   String get loginButton => 'Ulgama gir';

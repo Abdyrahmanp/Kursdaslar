@@ -205,6 +205,50 @@ class AnnouncementNotifier extends StateNotifier<List<Announcement>> {
     state = [newAnn, ...state];
     _saveCachedAnnouncements(state);
   }
+
+  /// Duýduryşy poz (hem serwerden, hem telefonyň ýadyndan)
+  Future<bool> deleteAnnouncement(String id) async {
+    state = state.where((a) => a.id != id).toList();
+    await _saveCachedAnnouncements(state);
+
+    try {
+      final ok = await _apiService.deleteAnnouncement(id);
+      return ok;
+    } catch (e) {
+      debugPrint('[AnnouncementNotifier] deleteAnnouncement error: $e');
+      return false;
+    }
+  }
+
+  /// Duýduryşy düzet (hem serwerde, hem telefonyň ýadynda)
+  Future<bool> updateAnnouncement({
+    required String id,
+    required String title,
+    required String content,
+    bool isUrgent = false,
+  }) async {
+    state = [
+      for (final a in state)
+        if (a.id == id)
+          a.copyWith(title: title, content: content, isUrgent: isUrgent)
+        else
+          a
+    ];
+    await _saveCachedAnnouncements(state);
+
+    try {
+      final ok = await _apiService.updateAnnouncement(
+        id: id,
+        title: title,
+        content: content,
+        isUrgent: isUrgent,
+      );
+      return ok;
+    } catch (e) {
+      debugPrint('[AnnouncementNotifier] updateAnnouncement error: $e');
+      return false;
+    }
+  }
 }
 
 final announcementProvider =

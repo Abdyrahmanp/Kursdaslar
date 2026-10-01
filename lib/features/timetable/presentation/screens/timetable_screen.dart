@@ -1,64 +1,12 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:topar_115/app/app.dart';
-
-// ── Data Models ──────────────────────────────────────────────────────────────
-
-class ClassEntry {
-  final int period;     // 1, 2, 3
-  final String subject;
-  final String teacher;
-  final String room;
-
-  const ClassEntry({
-    required this.period,
-    required this.subject,
-    required this.teacher,
-    required this.room,
-  });
-}
-
-// ── Static Timetable Data ────────────────────────────────────────────────────
-
-const _periods = [
-  ('1', '09:00', '10:20'),
-  ('2', '10:30', '11:50'),
-  ('3', '12:20', '13:40'),
-];
-
-const _schedule = {
-  1: [ // Monday
-    ClassEntry(period: 1, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-    ClassEntry(period: 2, subject: 'Ýapon dili', teacher: 'Nuryyewa Amanbike', room: '3341'),
-    ClassEntry(period: 3, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-  ],
-  2: [ // Tuesday
-    ClassEntry(period: 1, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-    ClassEntry(period: 2, subject: 'Matematika', teacher: 'Bonjakowa Ogultuwak', room: '3136'),
-    ClassEntry(period: 3, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-  ],
-  3: [ // Wednesday
-    ClassEntry(period: 1, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-    ClassEntry(period: 2, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-    ClassEntry(period: 3, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-  ],
-  4: [ // Thursday
-    ClassEntry(period: 1, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-    ClassEntry(period: 2, subject: 'Fizika', teacher: 'Amanmammedowa Maýsagül', room: '3119'),
-    ClassEntry(period: 3, subject: 'Iňlis dili', teacher: 'Berdinazarow Altymyrat', room: '3341'),
-  ],
-  5: [ // Friday
-    ClassEntry(period: 1, subject: 'Informatika', teacher: 'Başymow Serdar', room: '3136'),
-    ClassEntry(period: 2, subject: 'Ýapon dili', teacher: 'Nuryyewa Amanbike', room: '3341'),
-    ClassEntry(period: 3, subject: 'Ýapon dili', teacher: 'Nuryyewa Amanbike', room: '3341'),
-  ],
-  6: [ // Saturday
-    ClassEntry(period: 1, subject: 'Ýapon dili', teacher: 'Nuryyewa Amanbike', room: '3341'),
-    ClassEntry(period: 2, subject: 'Türkmen dili', teacher: 'Ýoldaşowa Zylyha', room: '3341'),
-    ClassEntry(period: 3, subject: 'Ýapon dili', teacher: 'Nuryyewa Amanbike', room: '3341'),
-  ],
-};
+import 'package:topar_115/core/utils/haptic_utils.dart';
+import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:topar_115/features/timetable/data/models/timetable_model.dart';
+import 'package:topar_115/features/timetable/data/repositories/timetable_repository.dart';
 
 const _dayNames = {
   1: 'Duşenbe',
@@ -96,7 +44,6 @@ const _enDayShort = {
   6: 'Sat',
 };
 
-// Subject color mapping
 Color _subjectColor(String subject) {
   if (subject.contains('Iňlis')) return const Color(0xFF3B82F6);
   if (subject.contains('Ýapon')) return const Color(0xFF8B5CF6);
@@ -117,16 +64,329 @@ IconData _subjectIcon(String subject) {
   return Icons.school_rounded;
 }
 
-// ── Active Day Provider ──────────────────────────────────────────────────────
 final _selectedDayProvider = StateProvider<int>((ref) {
-  // 1=Mon ... 6=Sat, 7=Sun → if Sunday, default to Monday
   final w = DateTime.now().weekday;
   return w <= 6 ? w : 1;
 });
 
-// ── Screen ───────────────────────────────────────────────────────────────────
+final _isEditingTimetableProvider = StateProvider<bool>((ref) => false);
+
 class TimetableScreen extends ConsumerWidget {
   const TimetableScreen({super.key});
+
+  void _showAddLessonDialog(BuildContext context, WidgetRef ref, int day, int nextPeriod) {
+    final defaultTimes = ClassEntry.defaultTimesForPeriod(nextPeriod);
+    final subjectCtrl = TextEditingController();
+    final teacherCtrl = TextEditingController();
+    final roomCtrl = TextEditingController(text: '3341');
+    final startCtrl = TextEditingController(text: defaultTimes.$1);
+    final endCtrl = TextEditingController(text: defaultTimes.$2);
+
+    final popularSubjects = [
+      'Iňlis dili',
+      'Ýapon dili',
+      'Matematika',
+      'Fizika',
+      'Informatika',
+      'Türkmen dili',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.add_circle_rounded, color: Color(0xFF6366F1)),
+              const Gap(10),
+              Text('$nextPeriod-nji Dersi Goşmak'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick subject chip picker
+                const Text(
+                  'Dersi saýlaň ýa-da ýazyň:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const Gap(6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: popularSubjects.map((s) {
+                    final isSel = subjectCtrl.text == s;
+                    return ChoiceChip(
+                      label: Text(s, style: const TextStyle(fontSize: 11)),
+                      selected: isSel,
+                      onSelected: (selected) {
+                        setModalState(() {
+                          subjectCtrl.text = selected ? s : '';
+                          if (s == 'Iňlis dili') teacherCtrl.text = 'Berdinazarow Altymyrat';
+                          if (s == 'Ýapon dili') teacherCtrl.text = 'Nuryyewa Amanbike';
+                          if (s == 'Matematika') {
+                            teacherCtrl.text = 'Bonjakowa Ogultuwak';
+                            roomCtrl.text = '3136';
+                          }
+                          if (s == 'Fizika') {
+                            teacherCtrl.text = 'Amanmammedowa Maýsagül';
+                            roomCtrl.text = '3119';
+                          }
+                          if (s == 'Informatika') {
+                            teacherCtrl.text = 'Başymow Serdar';
+                            roomCtrl.text = '3136';
+                          }
+                          if (s == 'Türkmen dili') teacherCtrl.text = 'Ýoldaşowa Zylyha';
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const Gap(12),
+                TextField(
+                  controller: subjectCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Dersiň Ady (Subject)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const Gap(10),
+                TextField(
+                  controller: teacherCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Mugallymyň Ady (Teacher)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const Gap(10),
+                TextField(
+                  controller: roomCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Otag / Kabinet (Room)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const Gap(10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: startCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Başlanýan wagty',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const Gap(8),
+                    Expanded(
+                      child: TextField(
+                        controller: endCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Gutarýan wagty',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Ýatyr'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final subj = subjectCtrl.text.trim();
+                if (subj.isEmpty) return;
+                Navigator.pop(ctx);
+                HapticUtils.medium();
+
+                final entry = ClassEntry(
+                  period: nextPeriod,
+                  subject: subj,
+                  teacher: teacherCtrl.text.trim(),
+                  room: roomCtrl.text.trim(),
+                  startTime: startCtrl.text.trim(),
+                  endTime: endCtrl.text.trim(),
+                );
+
+                final ok = await ref.read(timetableProvider.notifier).addLesson(day, entry);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok ? '🎉 Täze ders goşuldy we serwerde saklandy!' : '💾 Täze ders goşuldy.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Goş'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditLessonDialog(BuildContext context, WidgetRef ref, int day, int index, ClassEntry entry) {
+    final subjectCtrl = TextEditingController(text: entry.subject);
+    final teacherCtrl = TextEditingController(text: entry.teacher);
+    final roomCtrl = TextEditingController(text: entry.room);
+    final startCtrl = TextEditingController(text: entry.effectiveStartTime);
+    final endCtrl = TextEditingController(text: entry.effectiveEndTime);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.edit_rounded, color: Color(0xFF6366F1)),
+            const Gap(10),
+            Text('${entry.period}-nji Dersi Düzetmek'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: subjectCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Dersiň Ady (Subject)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const Gap(10),
+              TextField(
+                controller: teacherCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Mugallym (Teacher)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const Gap(10),
+              TextField(
+                controller: roomCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Otag (Room)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const Gap(10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: startCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Başlanýan wagty',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const Gap(8),
+                  Expanded(
+                    child: TextField(
+                      controller: endCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Gutarýan wagty',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Ýatyr'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final subj = subjectCtrl.text.trim();
+              if (subj.isEmpty) return;
+              Navigator.pop(ctx);
+              HapticUtils.medium();
+
+              final updated = entry.copyWith(
+                subject: subj,
+                teacher: teacherCtrl.text.trim(),
+                room: roomCtrl.text.trim(),
+                startTime: startCtrl.text.trim(),
+                endTime: endCtrl.text.trim(),
+              );
+
+              final ok = await ref.read(timetableProvider.notifier).updateLesson(day, index, updated);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok ? 'Ders täzelendi! ✅' : 'Ders ýerli täzelendi.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Ýatda sakla'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteLessonDialog(BuildContext context, WidgetRef ref, int day, int index, ClassEntry entry) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.red),
+            Gap(10),
+            Text('Dersi Pozmak'),
+          ],
+        ),
+        content: Text(
+          'Hakykatdan hem ${entry.period}-nji dersi (${entry.subject}) bu günki tertipden aýyrmak isleýärsiňizmi?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Ýatyr'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              HapticUtils.medium();
+              final ok = await ref.read(timetableProvider.notifier).deleteLesson(day, index);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok ? 'Ders pozuldy! 🗑️' : 'Ders aýryldy.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Hawa, Poz'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -136,19 +396,31 @@ class TimetableScreen extends ConsumerWidget {
     final todayWeekday = DateTime.now().weekday;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final classes = _schedule[selectedDay] ?? [];
+    final authState = ref.watch(authProvider);
+    final canManage = authState.canManageTimetable;
+    final isEditing = ref.watch(_isEditingTimetableProvider);
 
-    // Current period detection
-    int _currentPeriod() {
+    final schedule = ref.watch(timetableProvider);
+    final classes = schedule[selectedDay] ?? [];
+
+    int currentPeriodDetection() {
       final now = TimeOfDay.now();
       final mins = now.hour * 60 + now.minute;
-      if (mins >= 9 * 60 && mins <= 10 * 60 + 20) return 1;
-      if (mins >= 10 * 60 + 30 && mins <= 11 * 60 + 50) return 2;
-      if (mins >= 12 * 60 + 20 && mins <= 13 * 60 + 40) return 3;
+      for (final c in classes) {
+        final startParts = c.effectiveStartTime.split(':');
+        final endParts = c.effectiveEndTime.split(':');
+        if (startParts.length == 2 && endParts.length == 2) {
+          final sMin = (int.tryParse(startParts[0]) ?? 0) * 60 + (int.tryParse(startParts[1]) ?? 0);
+          final eMin = (int.tryParse(endParts[0]) ?? 0) * 60 + (int.tryParse(endParts[1]) ?? 0);
+          if (mins >= sMin && mins <= eMin) {
+            return c.period;
+          }
+        }
+      }
       return -1;
     }
 
-    final currentPeriod = (selectedDay == todayWeekday) ? _currentPeriod() : -1;
+    final currentPeriod = (selectedDay == todayWeekday) ? currentPeriodDetection() : -1;
 
     return Scaffold(
       body: NestedScrollView(
@@ -158,6 +430,32 @@ class TimetableScreen extends ConsumerWidget {
             expandedHeight: 140,
             pinned: true,
             backgroundColor: cs.primary,
+            actions: [
+              if (canManage)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    icon: Icon(
+                      isEditing ? Icons.check_circle_rounded : Icons.edit_note_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    tooltip: isEditing ? 'Düzetmegi tamamla' : 'Tertibi düzet',
+                    onPressed: () {
+                      HapticUtils.light();
+                      ref.read(_isEditingTimetableProvider.notifier).state = !isEditing;
+                    },
+                  ),
+                ),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                tooltip: 'Täzele',
+                onPressed: () {
+                  HapticUtils.light();
+                  ref.read(timetableProvider.notifier).syncWithServer();
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
               title: Column(
@@ -172,7 +470,7 @@ class TimetableScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    'ETUT • 115-topar',
+                    isEditing ? 'Düzetmek Režimi • Çalyşmak we Goşmak' : 'ETUT • 115-topar',
                     style: tt.bodySmall?.copyWith(
                       color: Colors.white.withAlpha(200),
                       fontSize: 11,
@@ -190,7 +488,6 @@ class TimetableScreen extends ConsumerWidget {
                 ),
                 child: Stack(
                   children: [
-                    // Decorative circles
                     Positioned(
                       right: -20,
                       top: -20,
@@ -215,7 +512,6 @@ class TimetableScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    // Info row
                     Positioned(
                       top: 50,
                       left: 16,
@@ -228,15 +524,14 @@ class TimetableScreen extends ConsumerWidget {
                               color: Colors.white.withAlpha(30),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.calendar_month_rounded,
-                                    size: 13, color: Colors.white),
-                                const Gap(5),
+                                Icon(Icons.calendar_month_rounded, size: 13, color: Colors.white),
+                                Gap(5),
                                 Text(
                                   '2026-2027 • I trimester',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
@@ -252,13 +547,12 @@ class TimetableScreen extends ConsumerWidget {
                               color: Colors.white.withAlpha(30),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.location_on_rounded,
-                                    size: 13, color: Colors.white),
-                                const Gap(5),
-                                const Text(
+                                Icon(Icons.location_on_rounded, size: 13, color: Colors.white),
+                                Gap(5),
+                                Text(
                                   'Oguzhan ETUT',
                                   style: TextStyle(
                                     color: Colors.white,
@@ -294,12 +588,12 @@ class TimetableScreen extends ConsumerWidget {
                       padding: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
                         onTap: () {
+                          HapticUtils.light();
                           ref.read(_selectedDayProvider.notifier).state = day;
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? cs.primary
@@ -339,9 +633,7 @@ class TimetableScreen extends ConsumerWidget {
                                   height: 5,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : cs.primary,
+                                    color: isSelected ? Colors.white : cs.primary,
                                   ),
                                 ),
                               ],
@@ -371,8 +663,7 @@ class TimetableScreen extends ConsumerWidget {
                   if (selectedDay == todayWeekday) ...[
                     const Gap(10),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
@@ -401,71 +692,140 @@ class TimetableScreen extends ConsumerWidget {
         ],
 
         // ── Class List ───────────────────────────────────────────
-        body: classes.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.weekend_rounded,
-                        size: 64, color: cs.outlineVariant),
-                    const Gap(16),
-                    Text(
-                      'Bu gün sapak ýok! 🎉',
-                      style: tt.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+        body: RefreshIndicator(
+          onRefresh: () async {
+            HapticUtils.light();
+            await ref.read(timetableProvider.notifier).syncWithServer();
+          },
+          child: classes.isEmpty && !isEditing
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.weekend_rounded, size: 64, color: cs.outlineVariant),
+                      const Gap(16),
+                      Text(
+                        'Bu gün sapak ýok! 🎉',
+                        style: tt.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const Gap(8),
-                    Text(
-                      'Dynç al, güýç topla!',
-                      style: tt.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
+                      const Gap(8),
+                      Text(
+                        'Dynç al, güýç topla!',
+                        style: tt.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-                children: [
-                  // Time legend
-                  _TimeLegend(currentPeriod: currentPeriod),
-                  const Gap(16),
-
-                  // Class cards
-                  ...classes.map((c) => _ClassCard(
-                        entry: c,
-                        isCurrentPeriod: currentPeriod == c.period,
-                        isToday: selectedDay == todayWeekday,
-                      )),
-                  const Gap(16),
-
-                  // Footer note
-                  Center(
-                    child: Text(
-                      'Oguzhan ETUT • ETUT 115 topar\n2026-2027 okuw ýyly • I trimester',
-                      textAlign: TextAlign.center,
-                      style: tt.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant.withAlpha(120),
-                        fontSize: 11,
-                      ),
-                    ),
+                      if (canManage) ...[
+                        const Gap(16),
+                        FilledButton.icon(
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Ders goş'),
+                          onPressed: () => _showAddLessonDialog(context, ref, selectedDay, 1),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
+                )
+              : (isEditing && canManage)
+                  // ── Reorderable Edit Mode ───────────────────────────
+                  ? ReorderableListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    itemCount: classes.length + 1,
+                    onReorder: (oldIndex, newIndex) {
+                      if (oldIndex >= classes.length || newIndex > classes.length) return;
+                      HapticUtils.light();
+                      ref.read(timetableProvider.notifier).reorderLessons(selectedDay, oldIndex, newIndex);
+                    },
+                    itemBuilder: (ctx, index) {
+                      if (index == classes.length) {
+                        return Container(
+                          key: const ValueKey('add_new_lesson_btn'),
+                          margin: const EdgeInsets.only(top: 8),
+                          child: FilledButton.tonalIcon(
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            icon: const Icon(Icons.add_circle_outline_rounded),
+                            label: Text(
+                              '+ Täze ${classes.length + 1}-nji Dersi Goş',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: () {
+                              _showAddLessonDialog(context, ref, selectedDay, classes.length + 1);
+                            },
+                          ),
+                        );
+                      }
+
+                      final c = classes[index];
+                      return _EditableClassCard(
+                        key: ValueKey('lesson_${c.period}_${c.subject}_$index'),
+                        index: index,
+                        entry: c,
+                        onEdit: () => _showEditLessonDialog(context, ref, selectedDay, index, c),
+                        onDelete: () => _showDeleteLessonDialog(context, ref, selectedDay, index, c),
+                      );
+                    },
+                  )
+                  // ── Standard Student View ──────────────────────────
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                      children: [
+                        _TimeLegend(
+                          classes: classes,
+                          currentPeriod: currentPeriod,
+                        ),
+                        const Gap(16),
+                        ...classes.map((c) => _ClassCard(
+                              entry: c,
+                              isCurrentPeriod: currentPeriod == c.period,
+                              isToday: selectedDay == todayWeekday,
+                            )),
+                        const Gap(16),
+                        Center(
+                          child: Text(
+                            'Oguzhan ETUT • ETUT 115 topar\n2026-2027 okuw ýyly • I trimester',
+                            textAlign: TextAlign.center,
+                            style: tt.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant.withAlpha(120),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+        ),
       ),
+      floatingActionButton: (canManage && !isEditing)
+          ? FloatingActionButton.extended(
+              icon: const Icon(Icons.add_rounded),
+              label: Text('${classes.length + 1}-nji Dersi Goş'),
+              onPressed: () {
+                _showAddLessonDialog(context, ref, selectedDay, classes.length + 1);
+              },
+            )
+          : null,
     );
   }
 }
 
-// ── Time Legend Widget ───────────────────────────────────────────────────────
+// ── Time Legend Widget (Dynamic Periods) ──────────────────────────────────────
 class _TimeLegend extends StatelessWidget {
+  final List<ClassEntry> classes;
   final int currentPeriod;
-  const _TimeLegend({required this.currentPeriod});
+
+  const _TimeLegend({
+    required this.classes,
+    required this.currentPeriod,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final periodCount = math.max(3, classes.length);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -474,10 +834,23 @@ class _TimeLegend extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: cs.outlineVariant.withAlpha(60)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: _periods.map((p) {
-          final isActive = currentPeriod.toString() == p.$1;
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: List.generate(periodCount, (i) {
+          final period = i + 1;
+          final isActive = currentPeriod == period;
+
+          final existingClass = classes.cast<ClassEntry?>().firstWhere(
+                (c) => c?.period == period,
+                orElse: () => null,
+              );
+          final startTime = existingClass?.effectiveStartTime ??
+              ClassEntry.defaultTimesForPeriod(period).$1;
+          final endTime = existingClass?.effectiveEndTime ??
+              ClassEntry.defaultTimesForPeriod(period).$2;
+
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -490,7 +863,7 @@ class _TimeLegend extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    p.$1,
+                    '$period',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -501,7 +874,7 @@ class _TimeLegend extends StatelessWidget {
               ),
               const Gap(4),
               Text(
-                p.$2,
+                startTime,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
@@ -509,7 +882,7 @@ class _TimeLegend extends StatelessWidget {
                 ),
               ),
               Text(
-                p.$3,
+                endTime,
                 style: TextStyle(
                   fontSize: 10,
                   color: isActive ? cs.primary : cs.onSurfaceVariant.withAlpha(160),
@@ -517,13 +890,13 @@ class _TimeLegend extends StatelessWidget {
               ),
             ],
           );
-        }).toList(),
+        }),
       ),
     );
   }
 }
 
-// ── Class Card Widget ────────────────────────────────────────────────────────
+// ── Standard Class Card Widget ───────────────────────────────────────────────
 class _ClassCard extends StatelessWidget {
   final ClassEntry entry;
   final bool isCurrentPeriod;
@@ -541,7 +914,6 @@ class _ClassCard extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
     final color = _subjectColor(entry.subject);
     final icon = _subjectIcon(entry.subject);
-    final period = _periods[entry.period - 1];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -595,7 +967,7 @@ class _ClassCard extends StatelessWidget {
                   ),
                   const Gap(6),
                   Text(
-                    '${period.$2}',
+                    entry.effectiveStartTime,
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
@@ -603,7 +975,7 @@ class _ClassCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${period.$3}',
+                    entry.effectiveEndTime,
                     style: TextStyle(
                       fontSize: 9,
                       color: color.withAlpha(180),
@@ -620,7 +992,6 @@ class _ClassCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Subject name + period badge
                     Row(
                       children: [
                         Expanded(
@@ -633,14 +1004,13 @@ class _ClassCard extends StatelessWidget {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: color.withAlpha(20),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${entry.period}-nji',
+                            '${entry.period}-nji ders',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -651,12 +1021,9 @@ class _ClassCard extends StatelessWidget {
                       ],
                     ),
                     const Gap(6),
-
-                    // Teacher
                     Row(
                       children: [
-                        Icon(Icons.person_rounded,
-                            size: 13, color: cs.onSurfaceVariant),
+                        Icon(Icons.person_rounded, size: 13, color: cs.onSurfaceVariant),
                         const Gap(5),
                         Expanded(
                           child: Text(
@@ -671,12 +1038,9 @@ class _ClassCard extends StatelessWidget {
                       ],
                     ),
                     const Gap(4),
-
-                    // Room
                     Row(
                       children: [
-                        Icon(Icons.meeting_room_rounded,
-                            size: 13, color: cs.onSurfaceVariant),
+                        Icon(Icons.meeting_room_rounded, size: 13, color: cs.onSurfaceVariant),
                         const Gap(5),
                         Text(
                           '${entry.room} otag',
@@ -687,19 +1051,17 @@ class _ClassCard extends StatelessWidget {
                         if (isCurrentPeriod && isToday) ...[
                           const Spacer(),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
                               color: color,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.circle,
-                                    size: 7, color: Colors.white),
-                                const Gap(4),
-                                const Text(
+                                Icon(Icons.circle, size: 7, color: Colors.white),
+                                Gap(4),
+                                Text(
                                   'Häzir',
                                   style: TextStyle(
                                     fontSize: 10,
@@ -716,6 +1078,136 @@ class _ClassCard extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Editable Class Card Widget (With Reorder Handle, Edit & Delete) ───────────
+class _EditableClassCard extends StatelessWidget {
+  final int index;
+  final ClassEntry entry;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _EditableClassCard({
+    super.key,
+    required this.index,
+    required this.entry,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final color = _subjectColor(entry.subject);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant.withAlpha(90)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(6),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // Drag handle
+            ReorderableDragStartListener(
+              index: index,
+              child: Container(
+                width: 48,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(25),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                ),
+                child: Center(
+                  child: Icon(Icons.drag_indicator_rounded, color: color, size: 24),
+                ),
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${entry.period}-nji ders',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const Gap(8),
+                        Expanded(
+                          child: Text(
+                            entry.subject,
+                            style: tt.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Gap(4),
+                    Text(
+                      '${entry.teacher} • ${entry.room} otag',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    const Gap(2),
+                    Text(
+                      '${entry.effectiveStartTime} – ${entry.effectiveEndTime}',
+                      style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Action buttons
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, color: Colors.blue, size: 20),
+                  tooltip: 'Düzet',
+                  onPressed: onEdit,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                  tooltip: 'Poz',
+                  onPressed: onDelete,
+                ),
+              ],
             ),
           ],
         ),
