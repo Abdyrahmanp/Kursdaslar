@@ -94,8 +94,8 @@ class _FifteenScaffoldState extends ConsumerState<FifteenScaffold> {
       if (_pageController.hasClients && _pageController.page?.round() != next) {
         _pageController.animateToPage(
           next,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutQuad,
         );
       }
     });
@@ -109,8 +109,8 @@ class _FifteenScaffoldState extends ConsumerState<FifteenScaffold> {
           if (_pageController.hasClients) {
             _pageController.animateToPage(
               0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutQuad,
             );
           }
         } else {
@@ -121,6 +121,8 @@ class _FifteenScaffoldState extends ConsumerState<FifteenScaffold> {
         backgroundColor: cs.surface,
         body: PageView(
           controller: _pageController,
+          physics: const PageScrollPhysics(parent: ClampingScrollPhysics()),
+          pageSnapping: true,
           onPageChanged: (i) {
             HapticUtils.light();
             ref.read(activeTabProvider.notifier).state = i;
@@ -141,8 +143,8 @@ class _FifteenScaffoldState extends ConsumerState<FifteenScaffold> {
             if (_pageController.hasClients) {
               _pageController.animateToPage(
                 i,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutQuad,
               );
             }
           },

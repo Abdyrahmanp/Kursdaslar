@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import 'package:topar_115/core/utils/haptic_utils.dart';
 import 'package:topar_115/features/auth/presentation/controllers/auth_controller.dart';
 import '../../data/models/topic_model.dart';
 import '../../data/repositories/subject_repository.dart';
+import 'attachment_viewer_screen.dart';
+import 'package:topar_115/core/utils/device_file_picker.dart';
 
 class SubjectsScreen extends ConsumerWidget {
   const SubjectsScreen({super.key});
@@ -21,16 +24,36 @@ class SubjectsScreen extends ConsumerWidget {
     final titleCtrl = TextEditingController();
     final contentCtrl = TextEditingController();
     final homeworkCtrl = TextEditingController();
+    final List<TopicAttachment> attachments = [];
+    String? inlineError; // Shown inside the dialog instead of snackbar
+
+    // Capture the outer scaffold messenger before opening the dialog
+    final outerMessenger = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        bool isSubmitting = false;
         return StatefulBuilder(
           builder: (context, setModalState) {
             final cs = Theme.of(context).colorScheme;
             final tt = Theme.of(context).textTheme;
+
+            Future<void> pickFromDevice() async {
+              HapticUtils.light();
+              try {
+                final picked = await DeviceFilePicker.pickFileFromDevice(filterType: '*/*');
+                if (picked != null) {
+                  setModalState(() {
+                    attachments.add(picked);
+                    inlineError = null;
+                  });
+                  HapticUtils.medium();
+                }
+              } catch (e) {
+                setModalState(() => inlineError = 'Faýl açylanda ýalňyşlyk: $e');
+              }
+            }
 
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -67,7 +90,7 @@ class SubjectsScreen extends ConsumerWidget {
                           ),
                           IconButton(
                             icon: const Icon(Icons.close_rounded),
-                            onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                            onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
                       ),
@@ -99,6 +122,9 @@ class SubjectsScreen extends ConsumerWidget {
                       // Topic Title
                       TextField(
                         controller: titleCtrl,
+                        onChanged: (_) {
+                          if (inlineError != null) setModalState(() => inlineError = null);
+                        },
                         decoration: InputDecoration(
                           labelText: 'Tema ady (Mysal: 1-nji Tema: ...)',
                           border: OutlineInputBorder(
@@ -132,6 +158,157 @@ class SubjectsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      const Gap(14),
+
+                      // ── Attachments Section ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.attachment_rounded, size: 18, color: cs.primary),
+                              const Gap(6),
+                              Text(
+                                'Faýl & Resminama goşmak',
+                                style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          if (attachments.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: cs.primaryContainer,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${attachments.length} faýl',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: cs.onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const Gap(8),
+
+                      // ── Single "Faýl ýükle" Button ──
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonalIcon(
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          icon: const Icon(Icons.file_upload_rounded, size: 20),
+                          label: const Text('Faýl ýükle'),
+                          onPressed: pickFromDevice,
+                        ),
+                      ),
+
+                      // Attachments preview list
+                      if (attachments.isNotEmpty) ...[
+                        const Gap(10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest.withAlpha(90),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: cs.outlineVariant.withAlpha(50)),
+                          ),
+                          child: Column(
+                            children: attachments.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final att = entry.value;
+                              Color iconColor = att.isPptx
+                                  ? const Color(0xFFEA580C)
+                                  : att.isPdf
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF059669);
+                              IconData iconData = att.isPptx
+                                  ? Icons.slideshow_rounded
+                                  : att.isPdf
+                                      ? Icons.picture_as_pdf_rounded
+                                      : Icons.image_rounded;
+
+                              return Container(
+                                margin: EdgeInsets.only(bottom: idx == attachments.length - 1 ? 0 : 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: cs.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: cs.outlineVariant.withAlpha(40)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(iconData, color: iconColor, size: 22),
+                                    const Gap(10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            att.name,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            '${att.type.toUpperCase()} • ${att.size} • ✓ Taýýar',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF059669),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded, size: 16, color: Colors.redAccent),
+                                      onPressed: () {
+                                        HapticUtils.light();
+                                        setModalState(() => attachments.removeAt(idx));
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+
+                      // ── Inline error message ──
+                      if (inlineError != null) ...[
+                        const Gap(10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 18),
+                              const Gap(8),
+                              Expanded(
+                                child: Text(
+                                  inlineError!,
+                                  style: TextStyle(fontSize: 13, color: Colors.red.shade800),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       const Gap(20),
 
                       // Actions
@@ -145,7 +322,7 @@ class SubjectsScreen extends ConsumerWidget {
                                 ),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                              onPressed: () => Navigator.pop(ctx),
                               child: const Text('Ýatyr'),
                             ),
                           ),
@@ -153,64 +330,54 @@ class SubjectsScreen extends ConsumerWidget {
                           Expanded(
                             flex: 2,
                             child: FilledButton.icon(
-                              icon: isSubmitting
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Icon(Icons.check_rounded),
-                              label: Text(isSubmitting ? 'Ýüklenýär…' : 'Temany Ýatda Sakla'),
+                              icon: const Icon(Icons.check_rounded),
+                              label: const Text('Temany Ýatda Sakla'),
                               style: FilledButton.styleFrom(
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              onPressed: isSubmitting
-                                  ? null
-                                  : () async {
-                                      if (titleCtrl.text.trim().isEmpty) return;
-                                      setModalState(() => isSubmitting = true);
+                              onPressed: () async {
+                                final titleText = titleCtrl.text.trim();
+                                if (titleText.isEmpty) {
+                                  HapticUtils.medium();
+                                  setModalState(() => inlineError = '⚠️ Haýyş, ilki bilen Tema adyny ýazyň!');
+                                  return;
+                                }
 
-                                      try {
-                                        final creator = authState.currentStudent?.name ??
-                                            'Tuşiýewa Abadan (Starşy)';
+                                HapticUtils.medium();
+                                // Close popup instantly as requested
+                                Navigator.pop(ctx);
 
-                                        final ok = await ref.read(subjectsProvider.notifier).addTopic(
-                                              subjectId: selectedSubjectId,
-                                              title: titleCtrl.text.trim(),
-                                              content: contentCtrl.text.trim(),
-                                              homework: homeworkCtrl.text.trim(),
-                                              createdBy: creator,
-                                            );
+                                final creator = authState.currentStudent?.name ??
+                                    'Tuşiýewa Abadan (Starşy)';
 
-                                        if (context.mounted) {
-                                          Navigator.pop(ctx);
-                                          HapticUtils.medium();
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                ok
-                                                    ? '🎉 Täze tema serwere üstünlikli goşuldy!'
-                                                    : '💾 Tema goşuldy we telefonyňyzda saklandy!',
-                                              ),
-                                              backgroundColor:
-                                                  ok ? const Color(0xFF059669) : Colors.orange.shade800,
-                                              behavior: SnackBarBehavior.floating,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(14),
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      } finally {
-                                        setModalState(() => isSubmitting = false);
-                                      }
-                                    },
+                                ref.read(subjectsProvider.notifier).addTopic(
+                                      subjectId: selectedSubjectId,
+                                      title: titleText,
+                                      content: contentCtrl.text.trim(),
+                                      homework: homeworkCtrl.text.trim(),
+                                      createdBy: creator,
+                                      attachments: List.from(attachments),
+                                    ).then((ok) {
+                                      outerMessenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            ok
+                                                ? '🎉 Täze tema serwere üstünlikli goşuldy!'
+                                                : '💾 Tema telefonyňyzda saklandy!',
+                                          ),
+                                          backgroundColor:
+                                              ok ? const Color(0xFF059669) : Colors.orange.shade800,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                        ),
+                                      );
+                                    });
+                              },
                             ),
                           ),
                         ],
@@ -225,6 +392,7 @@ class SubjectsScreen extends ConsumerWidget {
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -373,6 +541,8 @@ class SubjectsScreen extends ConsumerWidget {
     );
   }
 }
+
+
 
 class _TopicCard extends ConsumerWidget {
   final Topic topic;
@@ -769,6 +939,88 @@ class _TopicCard extends ConsumerWidget {
                   ),
                 ),
               ],
+              // Attachments preview if present
+              if (topic.hasAttachments) ...[
+                const Gap(10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: topic.attachments.map((att) {
+                    final isPptx = att.isPptx;
+                    final isPdf = att.isPdf;
+                    final chipColor = isPptx
+                        ? const Color(0xFFEA580C)
+                        : isPdf
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF059669);
+                    final icon = isPptx
+                        ? Icons.slideshow_rounded
+                        : isPdf
+                            ? Icons.picture_as_pdf_rounded
+                            : Icons.image_rounded;
+
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        HapticUtils.light();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (ctx) => AttachmentViewerScreen(
+                              attachment: att,
+                              topicTitle: topic.title,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: chipColor.withAlpha(30),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: chipColor.withAlpha(76)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, size: 14, color: chipColor),
+                            const Gap(5),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 160),
+                              child: Text(
+                                att.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: chipColor,
+                                ),
+                              ),
+                            ),
+                            const Gap(4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: chipColor.withAlpha(51),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                att.size,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: chipColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
 
               const Gap(12),
 
@@ -1009,6 +1261,50 @@ class TopicDetailScreen extends ConsumerWidget {
     );
   }
 
+
+  /// Builds a full-width image thumbnail for image attachments in the detail screen.
+  Widget _buildImageThumbnail(TopicAttachment att, BuildContext context, String topicTitle) {
+    final raw = att.urlOrData.trim();
+    Widget imgWidget;
+    if (raw.startsWith('data:image') && raw.contains('base64,')) {
+      try {
+        final bytes = base64Decode(raw.split('base64,').last);
+        imgWidget = Image.memory(bytes, fit: BoxFit.cover, width: double.infinity, height: 200,
+            errorBuilder: (context, error, stackTrace) => _imgError());
+      } catch (_) {
+        imgWidget = _imgError();
+      }
+    } else if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      imgWidget = Image.network(raw, fit: BoxFit.cover, width: double.infinity, height: 200,
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return SizedBox(height: 200, child: Center(child: CircularProgressIndicator(
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null)));
+          },
+          errorBuilder: (context, error, stackTrace) => _imgError());
+    } else {
+      return const SizedBox.shrink();
+    }
+    return GestureDetector(
+      onTap: () {
+        HapticUtils.light();
+        Navigator.push(context, MaterialPageRoute(
+            builder: (ctx) => AttachmentViewerScreen(attachment: att, topicTitle: topicTitle)));
+      },
+      child: Stack(children: [
+        imgWidget,
+        Positioned(bottom: 8, right: 8,
+            child: Container(padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18))),
+      ]),
+    );
+  }
+
+  Widget _imgError() => Container(height: 100, color: const Color(0xFF1E293B),
+      child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.white30, size: 40)));
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
@@ -1168,6 +1464,209 @@ ${liveTopic.hasHomework ? 'Öý işi:\n${liveTopic.homework}' : ''}
                 color: cs.onSurface,
               ),
             ),
+
+            // ── Attachments Section (PDF, PPTX, Images) ──
+            if (liveTopic.hasAttachments) ...[
+              const Gap(24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.folder_special_rounded, color: cs.primary, size: 20),
+                      const Gap(8),
+                      Text(
+                        'Ders Faýllary & Slaýdlar',
+                        style: tt.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withAlpha(38),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF059669)),
+                        Gap(4),
+                        Text(
+                          'Awto-taýyn',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+               const Gap(10),
+              Column(
+                children: liveTopic.attachments.map((att) {
+                  final isPptx = att.isPptx;
+                  final isPdf = att.isPdf;
+                  final isImg = att.isImage;
+                  final itemColor = isPptx
+                      ? const Color(0xFFEA580C)
+                      : isPdf
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF059669);
+                  final itemIcon = isPptx
+                      ? Icons.slideshow_rounded
+                      : isPdf
+                          ? Icons.picture_as_pdf_rounded
+                          : Icons.image_rounded;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: itemColor.withAlpha(64), width: 1.2),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        HapticUtils.light();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (ctx) => AttachmentViewerScreen(
+                              attachment: att,
+                              topicTitle: liveTopic.title,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Inline image thumbnail ──────────────────────
+                          if (isImg) _buildImageThumbnail(att, context, liveTopic.title),
+
+                          // ── File info row ────────────────────────────────
+                          Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              children: [
+                                if (!isImg)
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: itemColor.withAlpha(30),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(itemIcon, color: itemColor, size: 28),
+                                  ),
+                                if (!isImg) const Gap(14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        att.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const Gap(4),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: itemColor.withAlpha(25),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              att.type.toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: itemColor,
+                                              ),
+                                            ),
+                                          ),
+                                          const Gap(6),
+                                          Text(
+                                            '• ${att.size}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: cs.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          if (att.pageCount > 1) ...[
+                                            const Gap(6),
+                                            Text(
+                                              '• ${att.pageCount} sahypa',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: cs.onSurfaceVariant,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (!isImg) ...[
+                                  const Gap(8),
+                                  FilledButton.tonal(
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () {
+                                      HapticUtils.light();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (ctx) => AttachmentViewerScreen(
+                                            attachment: att,
+                                            topicTitle: liveTopic.title,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text('Aç'),
+                                        Gap(4),
+                                        Icon(Icons.arrow_forward_rounded, size: 14),
+                                      ],
+                                    ),
+                                  ),
+                                ] else ...[
+                                  Icon(
+                                    Icons.zoom_in_rounded,
+                                    color: itemColor,
+                                    size: 20,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+            ],
 
             // Homework section (if present)
             if (liveTopic.hasHomework) ...[

@@ -80,6 +80,7 @@ class SubjectApiService {
     }
   }
 
+
   // ── Yeni tema ekle ────────────────────────────────────────────────────────
   Future<bool> createTopic({
     required String subjectId,
@@ -87,6 +88,7 @@ class SubjectApiService {
     required String content,
     String homework = '',
     required String createdBy,
+    List<TopicAttachment> attachments = const [],
   }) async {
     try {
       final uri = _subjectsUri.replace(queryParameters: {'type': 'topic'});
@@ -104,6 +106,7 @@ class SubjectApiService {
               'content': content,
               'homework': homework,
               'created_by': createdBy,
+              'attachments': attachments.map((a) => a.toJson()).toList(),
             }),
           )
           .timeout(AppConstants.apiTimeout);
@@ -143,6 +146,7 @@ class SubjectApiService {
     required String title,
     required String content,
     String homework = '',
+    List<TopicAttachment> attachments = const [],
   }) async {
     try {
       final uri = _subjectsUri.replace(queryParameters: {'type': 'topic'});
@@ -158,6 +162,7 @@ class SubjectApiService {
               'title': title,
               'content': content,
               'homework': homework,
+              'attachments': attachments.map((a) => a.toJson()).toList(),
             }),
           )
           .timeout(AppConstants.apiTimeout);

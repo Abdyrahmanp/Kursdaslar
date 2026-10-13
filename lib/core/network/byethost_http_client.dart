@@ -77,8 +77,14 @@ class ByethostHttpClient extends http.BaseClient {
 
     // Cache request body in case we need to retry after solving challenge
     Uint8List? bodyBytes;
+    List<http.MultipartFile>? multipartFiles;
+    Map<String, String>? multipartFields;
+
     if (request is http.Request) {
       bodyBytes = request.bodyBytes;
+    } else if (request is http.MultipartRequest) {
+      multipartFiles = List.of(request.files);
+      multipartFields = Map.of(request.fields);
     }
 
     final response = await _inner.send(request);
@@ -123,13 +129,23 @@ class ByethostHttpClient extends http.BaseClient {
     _solvingCompleter = null;
 
     // Retry original request with the new cookie
-    final retryRequest = _rebuildRequest(request, bodyBytes);
+    final retryRequest = _rebuildRequest(
+      request,
+      bodyBytes: bodyBytes,
+      multipartFields: multipartFields,
+      multipartFiles: multipartFiles,
+    );
     _applyHeaders(retryRequest.headers);
 
     return _inner.send(retryRequest);
   }
 
-  http.BaseRequest _rebuildRequest(http.BaseRequest original, Uint8List? bodyBytes) {
+  http.BaseRequest _rebuildRequest(
+    http.BaseRequest original, {
+    Uint8List? bodyBytes,
+    Map<String, String>? multipartFields,
+    List<http.MultipartFile>? multipartFiles,
+  }) {
     if (original is http.Request) {
       final copy = http.Request(original.method, original.url)
         ..headers.addAll(original.headers)
@@ -138,6 +154,20 @@ class ByethostHttpClient extends http.BaseClient {
         ..persistentConnection = original.persistentConnection;
       if (bodyBytes != null && bodyBytes.isNotEmpty) {
         copy.bodyBytes = bodyBytes;
+      }
+      return copy;
+    }
+    if (original is http.MultipartRequest) {
+      final copy = http.MultipartRequest(original.method, original.url)
+        ..headers.addAll(original.headers)
+        ..followRedirects = original.followRedirects
+        ..maxRedirects = original.maxRedirects
+        ..persistentConnection = original.persistentConnection;
+      if (multipartFields != null) {
+        copy.fields.addAll(multipartFields);
+      }
+      if (multipartFiles != null) {
+        copy.files.addAll(multipartFiles);
       }
       return copy;
     }

@@ -112,10 +112,13 @@ function ensureTables(mysqli $conn): void {
         content TEXT NOT NULL DEFAULT '',
         homework TEXT NOT NULL DEFAULT '',
         created_by VARCHAR(100) NOT NULL DEFAULT 'Starşy',
+        attachments LONGTEXT NULL DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_subject (subject_id),
         INDEX idx_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    @$conn->query("ALTER TABLE topics ADD COLUMN attachments LONGTEXT NULL DEFAULT NULL");
 
     // Timetable
     @$conn->query("CREATE TABLE IF NOT EXISTS timetable (

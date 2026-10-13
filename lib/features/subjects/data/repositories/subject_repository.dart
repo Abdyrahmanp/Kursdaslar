@@ -209,6 +209,7 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
     required String content,
     String? homework,
     required String createdBy,
+    List<TopicAttachment> attachments = const [],
   }) async {
     // Look up subject details
     final sub = state.subjects.firstWhere(
@@ -235,6 +236,7 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
       homework: homework ?? '',
       date: dateStr,
       createdBy: createdBy,
+      attachments: attachments,
     );
 
     // Ekrana derrew goş (optimistic update)
@@ -249,6 +251,7 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
       content: content,
       homework: homework ?? '',
       createdBy: createdBy,
+      attachments: attachments,
     );
 
     if (ok) {
@@ -284,6 +287,7 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
     required String title,
     required String content,
     String homework = '',
+    List<TopicAttachment>? attachments,
   }) async {
     // Hemen lokal listede güncelle
     final updatedList = state.topics.map((t) {
@@ -298,6 +302,7 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
         homework: homework,
         date: t.date,
         createdBy: t.createdBy,
+        attachments: attachments ?? t.attachments,
       );
     }).toList();
     state = state.copyWith(topics: updatedList);
@@ -310,6 +315,7 @@ class SubjectsNotifier extends StateNotifier<SubjectsState> {
         title: title,
         content: content,
         homework: homework,
+        attachments: attachments ?? (state.topics.firstWhere((t) => t.id == topicId).attachments),
       );
     }
   }

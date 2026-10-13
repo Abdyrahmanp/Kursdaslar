@@ -60,6 +60,7 @@ if ($method === 'GET') {
                             COALESCE(s.code, 'DERS') AS subject_code,
                             COALESCE(s.name, 'Umumy Ders') AS subject_name,
                             t.title, t.content, t.homework, t.created_by,
+                            t.attachments,
                             DATE_FORMAT(t.created_at, '%d.%m.%Y') AS date
                      FROM topics t
                      LEFT JOIN subjects s ON s.id = t.subject_id
@@ -73,6 +74,7 @@ if ($method === 'GET') {
                             COALESCE(s.code, 'DERS') AS subject_code,
                             COALESCE(s.name, 'Umumy Ders') AS subject_name,
                             t.title, t.content, t.homework, t.created_by,
+                            t.attachments,
                             DATE_FORMAT(t.created_at, '%d.%m.%Y') AS date
                      FROM topics t
                      LEFT JOIN subjects s ON s.id = t.subject_id
@@ -82,7 +84,15 @@ if ($method === 'GET') {
             $stmt->execute();
             $res = $stmt->get_result();
             $rows = [];
-            while ($row = $res->fetch_assoc()) $rows[] = $row;
+            while ($row = $res->fetch_assoc()) {
+                if (isset($row['attachments']) && is_string($row['attachments']) && $row['attachments'] !== '') {
+                    $decodedAtts = json_decode($row['attachments'], true);
+                    $row['attachments'] = is_array($decodedAtts) ? $decodedAtts : [];
+                } else if (!isset($row['attachments'])) {
+                    $row['attachments'] = [];
+                }
+                $rows[] = $row;
+            }
             $stmt->close();
             jsonOk($rows);
         } catch (\Throwable $e) {}
@@ -111,6 +121,11 @@ if ($method === 'POST') {
         jsonError('Tema ady hökman!');
     }
 
+    $attachments = $body['attachments'] ?? [];
+    if (!is_array($attachments)) {
+        $attachments = json_decode($attachments, true) ?? [];
+    }
+
     if ($db) {
         try {
             $validSubject = false;
@@ -129,14 +144,41 @@ if ($method === 'POST') {
                 }
             }
 
+            $attachmentsJson = !empty($attachments) ? json_encode($attachments, JSON_UNESCAPED_UNICODE) : null;
             $stmt = $db->prepare(
-                'INSERT INTO topics (subject_id, title, content, homework, created_by)
-                 VALUES (?, ?, ?, ?, ?)'
+                'INSERT INTO topics (subject_id, title, content, homework, created_by, attachments)
+                 VALUES (?, ?, ?, ?, ?, ?)'
             );
-            $stmt->bind_param('issss', $subjectId, $title, $content, $homework, $createdBy);
+            $stmt->bind_param('isssss', $subjectId, $title, $content, $homework, $createdBy, $attachmentsJson);
             if ($stmt->execute()) {
                 $id = $db->insert_id;
                 $stmt->close();
+                // Also persist attachments in JSON file fallback store
+                $topics = loadJsonFile($jsonTopics, []);
+                $subs = loadJsonFile($jsonSubjects, $defaultSubjects);
+                $subName = 'Ders';
+                $subCode = 'DERS';
+                foreach ($subs as $s) {
+                    if ((int)$s['id'] === $subjectId) {
+                        $subName = $s['name'];
+                        $subCode = $s['code'];
+                        break;
+                    }
+                }
+                $newTopic = [
+                    'id' => $id,
+                    'subject_id' => $subjectId,
+                    'subject_code' => $subCode,
+                    'subject_name' => $subName,
+                    'title' => $title,
+                    'content' => $content,
+                    'homework' => $homework,
+                    'created_by' => $createdBy,
+                    'date' => date('d.m.Y'),
+                    'attachments' => $attachments,
+                ];
+                array_unshift($topics, $newTopic);
+                saveJsonFile($jsonTopics, $topics);
                 jsonOk(['id' => $id, 'subject_id' => $subjectId, 'message' => 'Täze tema goşuldy!']);
             }
         } catch (\Throwable $e) {}
@@ -166,6 +208,7 @@ if ($method === 'POST') {
         'homework' => $homework,
         'created_by' => $createdBy,
         'date' => date('d.m.Y'),
+        'attachments' => $attachments,
     ];
     array_unshift($topics, $newTopic);
     saveJsonFile($jsonTopics, $topics);
@@ -205,6 +248,11 @@ if ($method === 'PUT') {
     $id       = (int)($body['id'] ?? 0);
     $title    = trim($body['title']    ?? '');
     $content  = trim($body['content']  ?? '');
+    $attachments = isset($body['attachments']) ? $body['attachments'] : null;
+    if ($attachments !== null && !is_array($attachments)) {
+        $attachments = json_decode($attachments, true) ?? [];
+    }
+
     $homework = trim($body['homework'] ?? '');
 
     if ($id <= 0 || $title === '') {
@@ -213,8 +261,14 @@ if ($method === 'PUT') {
 
     if ($db) {
         try {
-            $stmt = $db->prepare('UPDATE topics SET title = ?, content = ?, homework = ? WHERE id = ?');
-            $stmt->bind_param('sssi', $title, $content, $homework, $id);
+            if ($attachments !== null) {
+                $attachmentsJson = !empty($attachments) ? json_encode($attachments, JSON_UNESCAPED_UNICODE) : null;
+                $stmt = $db->prepare('UPDATE topics SET title = ?, content = ?, homework = ?, attachments = ? WHERE id = ?');
+                $stmt->bind_param('ssssi', $title, $content, $homework, $attachmentsJson, $id);
+            } else {
+                $stmt = $db->prepare('UPDATE topics SET title = ?, content = ?, homework = ? WHERE id = ?');
+                $stmt->bind_param('sssi', $title, $content, $homework, $id);
+            }
             $stmt->execute();
             $stmt->close();
         } catch (\Throwable $e) {}
@@ -227,6 +281,9 @@ if ($method === 'PUT') {
             $t['title']    = $title;
             $t['content']  = $content;
             $t['homework'] = $homework;
+            if ($attachments !== null) {
+                $t['attachments'] = $attachments;
+            }
             break;
         }
     }

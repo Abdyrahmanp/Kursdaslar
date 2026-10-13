@@ -32,6 +32,8 @@ dependencies:
 
   # ── Networking & Cloud API ──────────────────────────────────────────────────
   http: ^1.2.2                # Alwaysdata REST API communication
+  webview_flutter: ^4.10.0    # In-app PDF/PPTX viewer via WebView + base64 data URI
+  path_provider: ^2.1.4       # Temp file path for file operations
 
   # ── Local Storage & Persistence ─────────────────────────────────────────────
   shared_preferences: ^2.2.3  # Remember login session and offline cache

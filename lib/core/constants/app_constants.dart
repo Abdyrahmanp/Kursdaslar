@@ -29,7 +29,7 @@ abstract final class AppConstants {
   /// Byethost PHP backend base URL.
   /// ⚠️  Byethost cPanel'den hesap açtıktan sonra bu URL'yi güncelle!
   /// Örnek: 'https://topar115.byethost7.com/api'
-  static const String apiBaseUrl = 'https://kursdaslar.byethost4.com/api';
+  static const String apiBaseUrl = 'http://kursdaslar.byethost4.com/api';
 
   /// Announcements endpoint
   static const String announcementsUrl = '$apiBaseUrl/announcements.php';
